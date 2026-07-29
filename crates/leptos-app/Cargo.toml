@@ -11,9 +11,9 @@ crate-type = ["lib", "cdylib", "rlib"]
 
 [features]
 default = []
-ssr  = ["dep:leptos/ssr",  "dep:leptos_axum/ssr",  "dep:leptos_meta/ssr",  "dep:leptos_router/ssr"]
-csr  = ["dep:leptos/csr",  "dep:leptos_axum/csr",  "dep:leptos_meta/csr",  "dep:leptos_router/csr"]
-hydrate = ["dep:leptos/hydrate"]
+ssr  = ["leptos/ssr",  "leptos_axum/ssr",  "leptos_meta/ssr",  "leptos_router/ssr"]
+csr  = ["leptos/csr",  "leptos_axum/csr",  "leptos_meta/csr",  "leptos_router/csr"]
+hydrate = ["leptos/hydrate"]
 nightly = ["leptos/nightly"]
 
 [dependencies]
