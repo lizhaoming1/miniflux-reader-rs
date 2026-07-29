@@ -9,6 +9,7 @@ description = "Trait abstraction + two impls (Mock for TDD, Reqwest for prod) fo
 [dependencies]
 common-text = { path = "../common-text" }
 reqwest = { workspace = true }
+async-trait = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
