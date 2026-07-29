@@ -1,0 +1,30 @@
+{
+    "listen_addr": "0.0.0.0:8083",
+
+    "miniflux": {
+        "url": "http://127.0.0.1:8081",
+        "username": "admin",
+        "password": "change-me"
+    },
+
+    "paths": {
+        "db":            "rust-data/epub_progress_rust.db",
+        "epub_dir":      "rust-epub-books",
+        "static_inject": "crates/http-server/assets"
+    },
+
+    "translate": {
+        "endpoint":     "https://translate.googleapis.com/translate_a/single",
+        "timeout_ms":   15000,
+        "batch_size":   25,
+        "max_retries":  3
+    },
+
+    "tts": {
+        "voice":        "zh-CN-XiaoxiaoNeural",
+        "rate":         "+0%",
+        "timeout_ms":   60000
+    },
+
+    "log_filter": "info,common_text=debug,progress_db=debug,http_server=debug,leptos_app=debug"
+}

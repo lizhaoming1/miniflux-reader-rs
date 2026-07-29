@@ -1,0 +1,3 @@
+-- Placeholder. Future PR: optional server-side session table (instead
+-- of plain HTTPOnly cookie on client, MVP YAGNI #3).
+-- noop

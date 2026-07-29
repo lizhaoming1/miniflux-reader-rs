@@ -1,0 +1,4 @@
+-- Placeholder. Future PR: TTS audio metadata (audio_sha, duration_ms,
+-- highlight_json_path) table so we don't regenerate for the exact same
+-- sentence. MVP YAGNI.
+-- noop

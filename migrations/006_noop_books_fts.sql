@@ -1,0 +1,3 @@
+-- Placeholder. Future PR: FTS5 full-text search across books.title +
+-- books.author (MVP YAGNI #5, only sort-by-time).
+-- noop

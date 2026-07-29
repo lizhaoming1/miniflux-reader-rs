@@ -1,0 +1,14 @@
+[package]
+name = "common-text"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Pure text processing: sentence split, paragraph chunk, bilingual HTML builder (no IO)"
+
+[dependencies]
+serde = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

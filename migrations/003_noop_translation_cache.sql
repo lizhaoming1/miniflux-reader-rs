@@ -1,0 +1,8 @@
+-- Placeholder. Future PR will add:
+--   CREATE TABLE IF NOT EXISTS translation_cache (
+--       sha1_src_lang TEXT PRIMARY KEY,
+--       zh_text       TEXT,
+--       created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+--   );
+-- (Skipped for MVP per YAGNI #2: only in-memory HashMap cache.)
+-- noop

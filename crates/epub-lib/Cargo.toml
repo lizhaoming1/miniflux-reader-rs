@@ -1,0 +1,22 @@
+[package]
+name = "epub-lib"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "EPUB parsing (zip+xml), chapter extraction, safe-name upload utility"
+
+[dependencies]
+common-text = { path = "../common-text" }
+zip = { workspace = true }
+quick-xml = { workspace = true }
+sanitize-filename = { workspace = true }
+sha1_smol = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+serde_json = { workspace = true }
