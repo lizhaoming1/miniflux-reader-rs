@@ -9,9 +9,9 @@ description = "Leptos 0.7 views: Bookshelf, BookReader, MinifluxArticle + #[serv
 [lib]
 crate-type = ["lib", "cdylib", "rlib"]
 
-# Feature forwarding: only the `leptos` crate has `ssr`/`csr`/`hydrate`
-# features in 0.7. leptos_axum / leptos_meta / leptos_router are
-# controlled by the same global `leptos` feature, NOT by per-crate flags.
+# Only the `leptos` crate has `ssr`/`csr`/`hydrate` feature bits in 0.7.
+# The integration crates (leptos_axum / leptos_meta / leptos_router) are
+# always compiled in the matching mode without per-crate feature toggles.
 [features]
 default = []
 ssr     = ["leptos/ssr"]
@@ -28,4 +28,7 @@ serde          = { workspace = true }
 common-text    = { path = "../common-text" }
 
 [dev-dependencies]
-leptos_dom_test = { workspace = true }
+# NOTE: There is no public `leptos_dom_test` crate on crates.io.
+# PR#7 tests use wasm-bindgen-test + wasm-pack (headless chrome) for
+# component interactions and plain `leptos::ssr::render_to_string` for
+# server-side DOM assertions.
