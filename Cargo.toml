@@ -20,7 +20,7 @@ rust-version = "1.81"
 
 [workspace.dependencies]
 # ---- HTTP ----
-axum = { version = "0.8", features = ["macros"] }
+axum = { version = "0.7", features = ["macros"] }
 axum-extra = { version = "0.10", features = ["cookie-signed", "cookie", "multipart", "form"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls", "gzip", "cookies"] }
 tower = { version = "0.5", features = ["util"] }
@@ -32,7 +32,7 @@ tokio = { version = "1", features = ["full"] }
 tokio-stream = "0.1"
 tokio-util = { version = "0.7", features = ["compat"] }
 
-# ---- Leptos 0.7 SSR + CSR + Hydration ----
+# ---- Leptos 0.7 ----
 leptos = { version = "0.7", default-features = false }
 leptos_axum = { version = "0.7", default-features = false }
 leptos_meta = { version = "0.7", default-features = false }
