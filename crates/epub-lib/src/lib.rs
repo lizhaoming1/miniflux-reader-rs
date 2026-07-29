@@ -1,21 +1,35 @@
-//! # epub-lib
-//!
-//! Reads EPUB 2.x/3.x packages from disk or an uploaded byte stream, builds
-//! the manifest + spine + NCX table of contents, and exposes chapter text
-//! for downstream rendering.
-//! The upload helper writes files to `rust-epub-books/<safe_name>.epub`
-//! and sanitises the filename against directory traversal.
+//! Scaffold only — real implementations in PR#3–5.
 
-#![forbid(unsafe_code)]
+// ---------- epub-lib public types -------------------------------------------
+pub use self::error::{EpubError, Result as EpubResult};
+pub mod parse {
+    use super::*;
 
-pub mod parse;
-pub mod upload;
-pub mod metadata;
-pub mod chapter;
-pub mod error;
-
-pub use error::{EpubError, Result};
-pub use metadata::EpubMetadata;
-pub use chapter::Chapter;
-pub use parse::EpubReader;
-pub use upload::{safe_name_for, save_upload_to_disk};
+    /// Placeholder reader. Real `EpubReader::open(path)` → list chapters in PR#3.
+    pub struct EpubReader;
+    impl EpubReader {
+        pub fn placeholder() -> Self { EpubReader }
+    }
+}
+pub mod upload {
+    use super::*;
+    pub fn safe_name_for(_file_name: &str) -> String { "placeholder-safename".to_string() }
+    pub fn save_upload_to_disk(_bytes: &[u8], _file_name: &str) -> EpubResult<String> { Ok(String::new()) }
+}
+pub mod metadata {
+    /// Placeholder struct. Real `title/author/total_chapters` in PR#3.
+    pub struct EpubMetadata {
+        pub title: String,
+    }
+}
+pub mod chapter {
+    /// Placeholder chapter. Real `idx, title, html_text` in PR#3.
+    pub struct Chapter {
+        pub idx: usize,
+    }
+}
+pub mod error {
+    use thiserror::Error;
+    #[derive(Debug, Error)] pub enum EpubError { #[error("placeholder")] Placeholder }
+    pub type Result<T, E = EpubError> = std::result::Result<T, E>;
+}

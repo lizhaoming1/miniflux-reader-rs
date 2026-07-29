@@ -1,22 +1,35 @@
-//! # progress-db
-//!
-//! SQLx + SQLite persistence for two tables (see `/migrations/001*` and
-//! `/migrations/002*`):
-//!   - `reading_progress` — upsert per unique `epub_path`, keyed on the
-//!     sanitised EPUB storage location returned by `epub-lib::safe_name_for`.
-//!   - `books`           — metadata (title, author, chapter count, size).
-//! Schema is **NOT** backward compatible with the Python version:
-//! per Scheme C the two stacks live in separate directories and share
-//! nothing.
+//! Scaffold only — real sqlx models/repos in PR#4.
 
-#![forbid(unsafe_code)]
-
-pub mod models;
-pub mod repository;
-pub mod migrate;
-pub mod error;
-
-pub use error::{DbError, Result};
-pub use models::{ReadingProgress, Book};
-pub use repository::{ProgressRepository, BookRepository};
-pub use migrate::run_migrations;
+pub mod error {
+    use thiserror::Error;
+    #[derive(Debug, Error)] pub enum DbError { #[error("placeholder")] Placeholder }
+    pub type Result<T, E = DbError> = std::result::Result<T, E>;
+}
+pub use error::{DbError, Result as DbResult};
+pub mod models {
+    use serde::{Deserialize, Serialize};
+    #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+    pub struct ReadingProgress {
+        pub epub_path:   String,
+        pub chapter_idx: i32,
+        pub scroll_pos:  i32,
+        pub percent:     f32,
+        pub overall:     f32,
+    }
+    #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+    pub struct Book {
+        pub safe_name: String,
+        pub title:     String,
+    }
+}
+pub mod repository {
+    use super::*;
+    pub struct ProgressRepository;
+    impl ProgressRepository { pub fn placeholder() -> Self { Self } }
+    pub struct BookRepository;
+    impl BookRepository { pub fn placeholder() -> Self { Self } }
+}
+pub mod migrate {
+    use super::DbResult;
+    pub async fn run_migrations(_db: ()) -> DbResult<()> { Ok(()) }
+}
