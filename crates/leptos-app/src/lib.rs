@@ -98,3 +98,39 @@ pub fn debounce_fire_count(calls: &[u64], window_ms: u64) -> usize {
     }
     count
 }
+
+#[cfg(test)]
+mod tests {
+    use super::debounce_fire_count;
+
+    #[test]
+    fn should_return_zero_when_no_calls() {
+        assert_eq!(debounce_fire_count(&[], 500), 0);
+    }
+
+    #[test]
+    fn should_return_one_when_single_call() {
+        assert_eq!(debounce_fire_count(&[100], 500), 1);
+    }
+
+    #[test]
+    fn should_merge_calls_within_window_into_one_fire() {
+        // consecutive gaps: 200, 150 — both < 500 — single group → 1 fire
+        let calls = [0, 200, 350];
+        assert_eq!(debounce_fire_count(&calls, 500), 1);
+    }
+
+    #[test]
+    fn should_split_groups_when_gap_reaches_window() {
+        // gap 500 exactly hits >= 500 → two groups → 2 fires
+        let calls = [0, 500];
+        assert_eq!(debounce_fire_count(&calls, 500), 2);
+    }
+
+    #[test]
+    fn should_count_three_groups_with_mixed_gaps() {
+        // gaps: 200 (<), 800 (>=), 100 (<), 600 (>=) → 3 fires
+        let calls = [0, 200, 1000, 1100, 1700];
+        assert_eq!(debounce_fire_count(&calls, 500), 3);
+    }
+}

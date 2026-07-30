@@ -32,9 +32,14 @@ const MAX_ARTICLE_LIMIT: u32 = 200;
 const UNREAD_LIST_CAP: u32 = 100_000;
 
 /// Build the Axum router with all application routes.
+///
+/// Explicit JSON/action routes are mounted under the `/api/v1/` prefix so
+/// that page routes (handled by the Leptos SSR fallback) can reuse plain
+/// names like `/feeds` or `/settings` without clashing. `/healthz` stays
+/// at the root because it's used by load balancers / container runners
+/// that don't know about our versioned API prefix.
 pub fn build_axum_routes(state: AppState) -> Router {
-    Router::new()
-        .route("/healthz", get(healthz))
+    let api = Router::new()
         // ---- Feeds ----
         .route("/feeds", get(list_feeds).post(add_feed))
         .route("/feeds/:id", delete(remove_feed))
@@ -53,17 +58,22 @@ pub fn build_axum_routes(state: AppState) -> Router {
         // ---- EPUB ----
         .route(
             "/epub/upload",
-            post(upload_epub).layer(axum::extract::DefaultBodyLimit::max(EPUB_UPLOAD_LIMIT)),
+            post(upload_epub)
+                .layer(axum::extract::DefaultBodyLimit::max(EPUB_UPLOAD_LIMIT)),
         )
-        .route("/epub/api/books", get(list_books))
+        .route("/epub/books", get(list_books))
         .route(
-            "/epub/api/progress/:safe_name",
+            "/epub/progress/:safe_name",
             get(get_progress).post(save_progress),
         )
         // ---- Translate / TTS ----
         .route("/translate", get(translate))
         .route("/tts", get(tts))
-        .route("/tts_highlight", post(tts_highlight))
+        .route("/tts_highlight", post(tts_highlight));
+
+    Router::new()
+        .route("/healthz", get(healthz))
+        .nest("/api/v1", api)
         .with_state(state)
 }
 
@@ -139,19 +149,22 @@ async fn save_progress(
     Ok(Json(json!({ "ok": true })))
 }
 
+/// Convert a `progress_db::Book` row to the JSON representation exposed on
+/// `/epub/api/books`. Extracted as a pure helper so we can unit-test the
+/// API contract (field names + shapes) without needing an async runtime or
+/// database connection.
+pub(crate) fn render_book_to_json(b: &progress_db::Book) -> serde_json::Value {
+    json!({
+        "safe_name": b.safe_name,
+        "title": b.title,
+        "author": b.author,
+    })
+}
+
 /// List all uploaded EPUBs as `BookInfo` JSON rows, newest first.
 async fn list_books(State(state): State<AppState>) -> Result<impl IntoResponse, AppHttpError> {
     let books = state.book_repo.list().await?;
-    let out: Vec<_> = books
-        .into_iter()
-        .map(|b| {
-            json!({
-                "safe_name": b.safe_name,
-                "title": b.title,
-                "author": b.author,
-            })
-        })
-        .collect();
+    let out: Vec<_> = books.iter().map(render_book_to_json).collect();
     Ok(Json(out))
 }
 
@@ -526,6 +539,63 @@ async fn update_settings(
     }
     state.settings_repo.set_many(&body).await?;
     Ok(Json(json!({ "ok": true, "updated": body.len() })))
+}
+
+// =====================================================================
+// Tests for pure route helpers
+// =====================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::render_book_to_json;
+    use progress_db::Book;
+    use serde_json::Value;
+
+    fn sample_book() -> Book {
+        Book {
+            safe_name: "rust-beginners.epub".to_string(),
+            title: "Rust for Beginners".to_string(),
+            author: "Ada Lovelace".to_string(),
+            total_chapters: 12,
+            file_size: 1_048_576,
+        }
+    }
+
+    #[test]
+    fn render_book_contains_only_three_public_fields() {
+        let b = sample_book();
+        let v = render_book_to_json(&b);
+        let obj = v.as_object().expect("rendered book must be a JSON object");
+        // Exact three keys: safe_name, title, author — no implementation
+        // details like total_chapters or file_size are leaked to the UI.
+        let mut keys: Vec<&str> = obj.keys().map(|k| k.as_str()).collect();
+        keys.sort();
+        assert_eq!(keys, ["author", "safe_name", "title"]);
+    }
+
+    #[test]
+    fn render_book_matches_public_contract_of_leptos_bookinfo() {
+        let b = sample_book();
+        let v = render_book_to_json(&b);
+        assert_eq!(v["safe_name"], Value::String(b.safe_name.clone()));
+        assert_eq!(v["title"], Value::String(b.title.clone()));
+        assert_eq!(v["author"], Value::String(b.author.clone()));
+    }
+
+    #[test]
+    fn render_book_handles_empty_author_and_title_gracefully() {
+        let b = Book {
+            safe_name: "blank.epub".to_string(),
+            title: String::new(),
+            author: String::new(),
+            total_chapters: 0,
+            file_size: 0,
+        };
+        let v = render_book_to_json(&b);
+        assert_eq!(v["safe_name"], "blank.epub");
+        assert_eq!(v["title"], "");
+        assert_eq!(v["author"], "");
+    }
 }
 
 // =====================================================================

@@ -160,11 +160,11 @@ pub fn App() -> impl IntoView {
                 <nav class="app-nav">
                     <A href="/">"Articles"</A>
                     <span>" · "</span>
-                    <A href="/feeds-ui">"Feeds"</A>
+                    <A href="/feeds">"Feeds"</A>
                     <span>" · "</span>
                     <A href="/epub">"EPUB"</A>
                     <span>" · "</span>
-                    <A href="/settings-ui">"Settings"</A>
+                    <A href="/settings">"Settings"</A>
                 </nav>
                 <header class="app-header">
                     <h1>"miniflux-reader-rs"</h1>
@@ -180,9 +180,9 @@ pub fn App() -> impl IntoView {
                         }
                     }>
                         <Route path=path!("/") view=HomePage />
-                        <Route path=path!("/feeds-ui") view=FeedsPage />
+                        <Route path=path!("/feeds") view=FeedsPage />
                         <Route path=path!("/article/:id") view=ArticlePage />
-                        <Route path=path!("/settings-ui") view=SettingsPageWrapper />
+                        <Route path=path!("/settings") view=SettingsPageWrapper />
                         <Route path=path!("/epub") view=BookshelfPage />
                         <Route path=path!("/epub/read/:name") view=ReaderPage />
                     </Routes>
