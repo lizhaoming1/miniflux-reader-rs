@@ -12,7 +12,7 @@ use axum::body::Body;
 use axum::http::{header, Request, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
 use feed_engine::sync::{start_poller, SyncConfig};
-use http_server::{build_axum_routes, init_tracing_with_filter, load, AppState};
+use http_server::{init_tracing_with_filter, load, AppState};
 use leptos::prelude::*;
 use services::{ReqwestTranslateService, ReqwestTtsService};
 use sqlx::sqlite::SqliteConnectOptions;
@@ -159,12 +159,22 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // ---- Server ----
-    // Explicit API routes take precedence; everything else falls through
-    // to the Leptos SSR page renderer. The wasm `/pkg/*` directory is wired
-    // separately in P1 — for P0 the SSR shell references `/pkg/app.js` but
-    // deep linking works without hydration.
-    let _pkg_dir = cfg.paths.pkg_dir.clone().unwrap_or_else(|| "pkg".to_string());
-    let app = build_axum_routes(state).fallback(leptos_ssr_fallback);
+    // Build the unified router: explicit /api/v1/* + /healthz, the
+    // /pkg/<file> static wasm mount, and the Leptos SSR fallback for
+    // any unmatched page route.
+    let pkg_dir = cfg.paths.pkg_dir.clone().unwrap_or_else(|| "pkg".to_string());
+    let pkg_path = std::path::PathBuf::from(&pkg_dir);
+    if !pkg_path.exists() {
+        tracing::warn!(
+            pkg_dir = %pkg_path.display(),
+            "/pkg/ static dir not found — wasm hydration will 404"
+        );
+    }
+    let app = http_server::build_page_router(
+        state,
+        &pkg_path,
+        axum::routing::any(leptos_ssr_fallback),
+    );
     let listener = tokio::net::TcpListener::bind(&cfg.listen_addr).await?;
     tracing::info!("server started on {}", cfg.listen_addr);
     axum::serve(listener, app).await?;

@@ -77,6 +77,33 @@ pub fn build_axum_routes(state: AppState) -> Router {
         .with_state(state)
 }
 
+/// Wrap a base API router with the Leptos SSR fallback plus the
+/// `/pkg/<file>` static handler that serves the wasm hydration bundle.
+///
+/// The static directory is supplied explicitly (rather than read from
+/// `AppState`) so this function is unit-testable: tests can pass a
+/// `tempfile::TempDir` and assert on real `GET /pkg/app.js` responses
+/// without depending on the on-disk repo layout.
+///
+/// Behavior contract (P2):
+/// * `GET /pkg/<file>` returns the file body if it exists on disk.
+/// * `GET /pkg/<file>` returns `404` if the file is missing or the dir
+///   does not exist (so the caller can still hit SSR pages but the
+///   browser logs a clear "missing wasm" warning instead of getting
+///   a 200-with-HTML response that breaks hydration).
+/// * Any other path falls through to the supplied fallback handler.
+pub fn build_page_router<F>(state: AppState, pkg_dir: &std::path::Path, fallback: F) -> Router
+where
+    F: axum::handler::Handler<(), ()> + Clone + Send + 'static,
+{
+    use tower_http::services::ServeDir;
+    let pkg_service = ServeDir::new(pkg_dir);
+    let pkg_router: Router = Router::new().nest_service("/pkg", pkg_service);
+    build_axum_routes(state)
+        .merge(pkg_router)
+        .fallback(fallback)
+}
+
 // =====================================================================
 // Preserved handlers (healthz, EPUB, translate, TTS)
 // =====================================================================
@@ -595,6 +622,149 @@ mod tests {
         assert_eq!(v["safe_name"], "blank.epub");
         assert_eq!(v["title"], "");
         assert_eq!(v["author"], "");
+    }
+}
+
+// =====================================================================
+// Integration tests for /pkg static + fallback wiring
+// =====================================================================
+
+#[cfg(test)]
+mod page_router_tests {
+    //! The /pkg/ static mount and Leptos SSR fallback are wired through
+    //! `build_page_router`. We exercise both with a real `tower::Service`
+    //! call against an in-memory Router (no network) so the contract
+    //! is enforced end-to-end.
+
+    use std::path::Path;
+
+    use axum::body::{to_bytes, Body};
+    use axum::http::{Request, StatusCode};
+    use axum::response::{IntoResponse, Response};
+    use axum::routing::get;
+    use axum::Router;
+    use tempfile::TempDir;
+    use tower::ServiceExt;
+
+    fn dummy_state() -> crate::state::AppState {
+        // We don't hit any handler that needs the DB in these tests —
+        // the `state` is only held for API routes which we don't call.
+        // The in-memory SQLite pool is sufficient to construct AppState.
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_lazy("sqlite::memory:")
+            .expect("lazy memory pool");
+        crate::state::AppState::new(
+            pool,
+            std::sync::Arc::new(services::MockTranslateService::with_fixed_vec(vec![
+                "test".to_string(),
+            ])),
+            std::sync::Arc::new(services::MockTtsService::with_timeout(
+                std::time::Duration::from_millis(0),
+            )),
+            std::path::PathBuf::from("/tmp"),
+        )
+    }
+
+    /// Tiny fallback that always replies "fallback" so we can verify
+    /// the dispatch order: /pkg/ -> static, everything else -> fallback.
+    async fn ok_fallback() -> Response {
+        (StatusCode::OK, "fallback").into_response()
+    }
+
+    fn make_router(pkg_dir: &Path) -> Router {
+        super::build_page_router(dummy_state(), pkg_dir, get(ok_fallback))
+    }
+
+    async fn body_string(resp: Response) -> (StatusCode, String) {
+        let status = resp.status();
+        let bytes = to_bytes(resp.into_body(), 1_000_000)
+            .await
+            .expect("body read");
+        let s = String::from_utf8(bytes.to_vec()).unwrap_or_default();
+        (status, s)
+    }
+
+    fn write_pkg_file(dir: &Path, name: &str, contents: &str) {
+        std::fs::write(dir.join(name), contents).expect("write pkg file");
+    }
+
+    #[tokio::test]
+    async fn should_serve_pkg_file_when_present() {
+        let tmp = TempDir::new().expect("tempdir");
+        write_pkg_file(tmp.path(), "app.js", "console.log('wasm-stub');");
+
+        let app = make_router(tmp.path());
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .uri("/pkg/app.js")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .expect("router call");
+
+        let (status, body) = body_string(resp).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(
+            body.contains("wasm-stub"),
+            "expected static file body, got: {body}"
+        );
+    }
+
+    #[tokio::test]
+    async fn should_return_404_when_pkg_file_missing() {
+        let tmp = TempDir::new().expect("tempdir");
+        // directory exists but is empty
+        let app = make_router(tmp.path());
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .uri("/pkg/app.js")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .expect("router call");
+
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn should_fall_through_to_fallback_for_non_pkg_paths() {
+        let tmp = TempDir::new().expect("tempdir");
+        let app = make_router(tmp.path());
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .uri("/feeds")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .expect("router call");
+
+        let (status, body) = body_string(resp).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(body, "fallback");
+    }
+
+    #[tokio::test]
+    async fn should_preserve_healthz_route_under_page_router() {
+        let tmp = TempDir::new().expect("tempdir");
+        let app = make_router(tmp.path());
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .uri("/healthz")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .expect("router call");
+
+        assert_eq!(resp.status(), StatusCode::OK);
     }
 }
 

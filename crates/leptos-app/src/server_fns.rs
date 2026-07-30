@@ -5,6 +5,13 @@
 //! render real content before the full data-layer integration (P1) is
 //! in place. P1 will replace the fixtures with real `#[server]` calls
 //! backed by the HTTP API or direct repository access.
+//!
+//! P2: Added contract tests in `mod tests` that pin down every visible
+//! invariant the UI relies on (mix of read/unread, ISO timestamps,
+//! monotonic bilingual offsets, non-empty book titles, …). These
+//! guarantees must continue to hold once the fixtures are replaced by
+//! real server functions.
+
 
 use common_text::BilingualSentence;
 
@@ -167,3 +174,129 @@ pub fn fixture_book_progress(safe_name: &str) -> f64 {
         _ => 0.0,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    //! Contract tests for the P0 fixture generators. These pin down
+    //! the shape the UI code relies on so that the eventual swap to
+    //! real `#[server]` calls keeps the same observable behaviour.
+
+    use super::*;
+
+    #[test]
+    fn should_return_at_least_one_unread_article() {
+        let articles = fixture_articles();
+        assert!(
+            articles.iter().any(|a| !a.read),
+            "the home list must contain at least one unread row, \
+             otherwise the read/unread visual states are untestable"
+        );
+    }
+
+    #[test]
+    fn should_return_a_mix_of_read_and_unread_articles() {
+        let articles = fixture_articles();
+        let has_unread = articles.iter().any(|a| !a.read);
+        let has_read = articles.iter().any(|a| a.read);
+        assert!(has_unread && has_read, "must cover both visual states");
+    }
+
+    #[test]
+    fn should_publish_articles_in_iso_8601_utc_format() {
+        let articles = fixture_articles();
+        for a in &articles {
+            // `T…Z` markers guarantee we don't accidentally regress to
+            // "YYYY-MM-DD HH:MM" local strings, which break JS `Date`.
+            assert!(
+                a.published_at.ends_with('Z') && a.published_at.contains('T'),
+                "non-ISO timestamp: {a:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn should_return_distinct_feed_ids_in_articles() {
+        let articles = fixture_articles();
+        let unique: std::collections::HashSet<_> =
+            articles.iter().map(|a| a.feed_id).collect();
+        assert!(
+            unique.len() >= 2,
+            "articles should cover at least 2 distinct feeds"
+        );
+    }
+
+    #[test]
+    fn should_include_zero_unread_feed_in_fixture() {
+        let feeds = fixture_feeds();
+        assert!(
+            feeds.iter().any(|f| f.unread_count == 0),
+            "need a feed with no unread items to exercise the empty badge"
+        );
+    }
+
+    #[test]
+    fn should_include_nonzero_unread_feed_in_fixture() {
+        let feeds = fixture_feeds();
+        assert!(
+            feeds.iter().any(|f| f.unread_count > 0),
+            "need a feed with unread items to exercise the badge"
+        );
+    }
+
+    #[test]
+    fn should_return_books_with_epub_safe_names() {
+        let books = fixture_books();
+        assert!(!books.is_empty());
+        for b in &books {
+            assert!(
+                b.safe_name.ends_with(".epub"),
+                "book safe_name must keep the .epub extension: {b:?}"
+            );
+            assert!(!b.title.is_empty(), "book title must not be empty");
+        }
+    }
+
+    #[test]
+    fn should_return_bilingual_sentences_with_monotonic_offsets() {
+        let (sentences, lang) = fixture_bilingual_sentences();
+        assert!(matches!(lang, ToggleLang::Bilingual));
+        assert!(!sentences.is_empty());
+        // src_start should be non-decreasing and src_end strictly increasing,
+        // otherwise the bilingual reader can't index into the source text.
+        let mut prev_end: usize = 0;
+        for s in &sentences {
+            assert!(
+                s.src_end >= s.src_start,
+                "src_end < src_start: {s:?}"
+            );
+            assert!(s.src_end > prev_end, "src_end must be strictly increasing");
+            prev_end = s.src_end;
+        }
+    }
+
+    #[test]
+    fn should_return_zero_progress_for_unknown_book() {
+        assert_eq!(fixture_book_progress("nope.epub"), 0.0);
+    }
+
+    #[test]
+    fn should_return_positive_progress_for_known_book() {
+        assert!(
+            fixture_book_progress("rust-for-rustaceans.epub") > 0.0,
+            "first fixture book should have started reading"
+        );
+    }
+
+    #[test]
+    fn fixture_articles_are_deterministic_across_calls() {
+        let a = fixture_articles();
+        let b = fixture_articles();
+        assert_eq!(a.len(), b.len());
+        for (x, y) in a.iter().zip(b.iter()) {
+            assert_eq!(x.id, y.id);
+            assert_eq!(x.url, y.url);
+            assert_eq!(x.read, y.read);
+        }
+    }
+}
+
