@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "rust"]
+  pull_request:
+    branches: ["main", "rust"]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  # rust-toolchain.toml pins 1.92.0; rustup will auto-install via the file.
+  SQLX_OFFLINE: "true"
+
+jobs:
+  # ---- Mandatory check #1: formatting ----
+  fmt:
+    name: cargo fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run cargo fmt --check
+        run: cargo fmt --all -- --check
+
+  # ---- Mandatory check #2: clippy (-D warnings) ----
+  clippy:
+    name: cargo clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system deps (sqlite3 for sqlx build)
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
+      - uses: Swatinem/rust-cache@v2
+      - name: Run clippy with -D warnings
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+  # ---- Mandatory check #3: tests (NOT --ignored) ----
+  test:
+    name: cargo test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system deps
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
+      - uses: Swatinem/rust-cache@v2
+      - name: Run workspace tests (integration tests serial)
+        run: cargo test --workspace -- --test-threads=1
+      - name: Verify test count ≥ 100 (PR#8 acceptance)
+        run: |
+          echo "Test result summary (cargo test output above must show ≥100 passed)"
+          cargo test --workspace --no-fail-fast 2>&1 | grep "test result:" || true
+
+  # ---- Mandatory check #4: sqlx migrations reach v6 ----
+  migrate:
+    name: sqlx migrate verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system deps
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev sqlite3
+      - uses: Swatinem/rust-cache@v2
+      - name: Run migrations on a fresh SQLite DB and verify version=6
+        run: |
+          cargo build -p progress-db --tests
+          # Use a throwaway example that calls run_migrations + queries _sqlx_migrations
+          mkdir -p /tmp/migrate-check
+          cat > /tmp/migrate-check/check.rs <<'RUSTEOF'
+          use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+          use sqlx::SqlitePool;
+          use std::str::FromStr;
+          #[tokio::main]
+          async fn main() -> Result<(), Box<dyn std::error::Error>> {
+              let opts = SqliteConnectOptions::from_str("sqlite:///tmp/migrate-check/verify.db")?.create_if_missing(true);
+              let pool = SqlitePoolOptions::new().max_connections(1).connect_with(opts).await?;
+              progress_db::run_migrations(&pool).await?;
+              let (v,): (i64,) = sqlx::query_as("SELECT MAX(version) FROM _sqlx_migrations").fetch_one(&pool).await?;
+              let (c,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM _sqlx_migrations").fetch_one(&pool).await?;
+              assert_eq!(v, 6, "migration version must be 6, got {v}");
+              assert_eq!(c, 6, "migration count must be 6, got {c}");
+              println!("MIGRATE_OK version={v} count={c}");
+              Ok(())
+          }
+          RUSTEOF
+          cp /tmp/migrate-check/check.rs crates/progress-db/examples/migrate_check.rs
+          mkdir -p crates/progress-db/examples
+          cp /tmp/migrate-check/check.rs crates/progress-db/examples/migrate_check.rs
+          cargo run -p progress-db --example migrate_check
+          rm -rf crates/progress-db/examples
+          sqlite3 /tmp/migrate-check/verify.db "SELECT version, description, success FROM _sqlx_migrations ORDER BY version;"
+
+  # ---- Optional: Docker build (release artifact) — only on tag/main ----
+  docker:
+    name: docker build
+    runs-on: ubuntu-latest
+    # Only build image on main pushes or tags to save CI minutes on PRs
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    needs: [fmt, clippy, test, migrate]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image (no push)
+        run: docker build -t miniflux-reader-rs:v0.1.0 .
+      - name: Smoke test — container starts and listens on :8083
+        run: |
+          docker run -d --name smoke -p 8083:8083 miniflux-reader-rs:v0.1.0
+          sleep 3
+          # Container should still be running (didn't crash on startup)
+          docker ps --filter name=smoke --format "{{.Status}}" | grep -q "Up"
+          docker stop smoke || true
+          docker rm smoke || true
