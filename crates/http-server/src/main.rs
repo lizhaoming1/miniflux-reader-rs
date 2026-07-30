@@ -71,7 +71,10 @@ async fn main() -> anyhow::Result<()> {
         };
         let interval = Duration::from_secs(cfg.feed.poll_interval_secs);
         tokio::spawn(async move { start_poller(pool_c, interval, sync_cfg).await });
-        tracing::info!(interval_s = cfg.feed.poll_interval_secs, "RSS poller started");
+        tracing::info!(
+            interval_s = cfg.feed.poll_interval_secs,
+            "RSS poller started"
+        );
     }
 
     // ---- Server ----

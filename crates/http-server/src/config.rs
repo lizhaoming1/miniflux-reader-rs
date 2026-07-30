@@ -21,9 +21,15 @@ pub struct FeedCfg {
     pub user_agent: String,
 }
 
-fn default_poll() -> u64 { 900 }
-fn default_fetch_timeout() -> u64 { 30 }
-fn default_ua() -> String { "miniflux-reader-rs/0.2.0".to_string() }
+fn default_poll() -> u64 {
+    900
+}
+fn default_fetch_timeout() -> u64 {
+    30
+}
+fn default_ua() -> String {
+    "miniflux-reader-rs/0.2.0".to_string()
+}
 
 impl Default for FeedCfg {
     fn default() -> Self {
@@ -62,7 +68,9 @@ pub struct TranslateCfg {
     pub target_lang: String,
 }
 
-fn default_target_lang() -> String { "zh-CN".to_string() }
+fn default_target_lang() -> String {
+    "zh-CN".to_string()
+}
 
 /// TTS backend settings.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

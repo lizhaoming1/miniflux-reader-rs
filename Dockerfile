@@ -1,12 +1,12 @@
-# Dockerfile for miniflux-reader-rs v0.1.0
+# Dockerfile for miniflux-reader-rs v0.2.0
 #
 # Multi-stage build:
 #   1. builder: rust:1.92-slim + cargo-leptos → produces single static-ish binary
 #   2. runtime: debian:bookworm-slim + ca-certificates + binary → ~50MB image
 #
-# Build:  docker build -t miniflux-reader-rs:v0.1.0 .
+# Build:  docker build -t miniflux-reader-rs:v0.2.0 .
 # Run:    docker run -p 8083:8083 -v $(pwd)/rust-config.json:/app/rust-config.json \
-#                 -v $(pwd)/rust-data:/app/rust-data miniflux-reader-rs:v0.1.0
+#                 -v $(pwd)/rust-data:/app/rust-data miniflux-reader-rs:v0.2.0
 
 # ---------- Stage 1: builder ----------
 FROM rust:1.92-slim-bookworm AS builder
@@ -40,7 +40,7 @@ RUN cargo leptos build --release
 # ---------- Stage 2: runtime ----------
 FROM debian:bookworm-slim AS runtime
 
-# Runtime deps: ca-certificates (HTTPS to Miniflux/translate/tts),
+# Runtime deps: ca-certificates (HTTPS to RSS feeds / translate / tts),
 # libsqlite3-0 (sqlx runtime), tini (PID 1 signal handling).
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \

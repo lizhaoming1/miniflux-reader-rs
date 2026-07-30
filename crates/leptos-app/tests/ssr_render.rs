@@ -158,10 +158,7 @@ fn t5_feedlist_two_items() {
     let html = with_owner(|| view! { <FeedList feeds=feeds.clone() /> }.to_html());
     assert!(html.contains("HN"), "missing title HN; html: {html}");
     assert!(html.contains("LWN"), "missing title LWN; html: {html}");
-    assert!(
-        html.contains(">3<"),
-        "missing unread count 3; html: {html}"
-    );
+    assert!(html.contains(">3<"), "missing unread count 3; html: {html}");
 }
 
 // ---------- T6: ArticleList empty state renders "No articles" ----------

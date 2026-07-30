@@ -233,7 +233,9 @@ async fn sync_all_handler(
         let n = feed_engine::sync::sync_all_feeds(&pool, &sync_cfg).await;
         tracing::info!(new = n, "manual sync_all finished");
     });
-    Ok(Json(json!({ "ok": true, "message": "sync started in background" })))
+    Ok(Json(
+        json!({ "ok": true, "message": "sync started in background" }),
+    ))
 }
 
 // =====================================================================
@@ -252,12 +254,18 @@ async fn list_articles(
     State(state): State<AppState>,
     Query(q): Query<ArticlesQuery>,
 ) -> Result<impl IntoResponse, AppHttpError> {
-    let limit = q.limit.unwrap_or(DEFAULT_ARTICLE_LIMIT).min(MAX_ARTICLE_LIMIT);
+    let limit = q
+        .limit
+        .unwrap_or(DEFAULT_ARTICLE_LIMIT)
+        .min(MAX_ARTICLE_LIMIT);
     let offset = q.offset.unwrap_or(0);
     let articles = if q.unread_only.unwrap_or(false) {
         state.article_repo.list_unread(q.feed_id, limit).await?
     } else {
-        state.article_repo.list_all(q.feed_id, limit, offset).await?
+        state
+            .article_repo
+            .list_all(q.feed_id, limit, offset)
+            .await?
     };
     let feed_title_map: HashMap<i64, String> = state
         .feed_repo
@@ -300,8 +308,7 @@ async fn get_article(
             .await?
             .and_then(|s| s.parse().ok())
             .unwrap_or(30);
-        match feed_engine::content::extract_content(&a.url, Duration::from_secs(timeout_secs))
-            .await
+        match feed_engine::content::extract_content(&a.url, Duration::from_secs(timeout_secs)).await
         {
             Ok(extracted) => {
                 // Persist to DB so future reads don't re-fetch.
@@ -328,9 +335,7 @@ async fn get_article(
         }
     };
     // Sentence-split and optionally translate.
-    use common_text::{
-        render_bilingual_div, split_sentences, BilingualSentence, LanguageHint,
-    };
+    use common_text::{render_bilingual_div, split_sentences, BilingualSentence, LanguageHint};
     let sentences = split_sentences(&html_parts, LanguageHint::Detect);
     // TODO(perf): translate batch via state.translate. Placeholder below
     // renders untranslated bilingual with empty zh — the
@@ -387,9 +392,7 @@ async fn mark_all_read(
     Ok(Json(json!({ "ok": true })))
 }
 
-async fn unread_count(
-    State(state): State<AppState>,
-) -> Result<impl IntoResponse, AppHttpError> {
+async fn unread_count(State(state): State<AppState>) -> Result<impl IntoResponse, AppHttpError> {
     let c = state.article_repo.count_unread().await?;
     Ok(Json(json!({ "count": c })))
 }
@@ -428,18 +431,15 @@ async fn opml_import(
         let n = feed_engine::sync::sync_all_feeds(&pool, &cfg).await;
         tracing::info!(new = n, "post-OPML sync_all finished");
     });
-    Ok(Json(json!({ "ok": true, "added": added, "failed": failed })))
+    Ok(Json(
+        json!({ "ok": true, "added": added, "failed": failed }),
+    ))
 }
 
-async fn opml_export(
-    State(state): State<AppState>,
-) -> Result<impl IntoResponse, AppHttpError> {
+async fn opml_export(State(state): State<AppState>) -> Result<impl IntoResponse, AppHttpError> {
     let feeds = state.feed_repo.list().await?;
     let xml = feed_engine::opml::export_opml(&feeds);
-    Ok((
-        [(header::CONTENT_TYPE, "text/xml; charset=utf-8")],
-        xml,
-    ))
+    Ok(([(header::CONTENT_TYPE, "text/xml; charset=utf-8")], xml))
 }
 
 // =====================================================================
@@ -462,9 +462,7 @@ struct SettingsValue {
     value: String,
 }
 
-async fn get_settings(
-    State(state): State<AppState>,
-) -> Result<impl IntoResponse, AppHttpError> {
+async fn get_settings(State(state): State<AppState>) -> Result<impl IntoResponse, AppHttpError> {
     let stored = state.settings_repo.get_all().await?;
     let out: Vec<SettingsValue> = ALLOWED_SETTINGS_KEYS
         .iter()
@@ -486,7 +484,9 @@ async fn update_settings(
     // Validate keys.
     for k in body.keys() {
         if !ALLOWED_SETTINGS_KEYS.contains(&k.as_str()) {
-            return Err(AppHttpError::BadRequest(format!("unknown setting key: {k}")));
+            return Err(AppHttpError::BadRequest(format!(
+                "unknown setting key: {k}"
+            )));
         }
     }
     state.settings_repo.set_many(&body).await?;

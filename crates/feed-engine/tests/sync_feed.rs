@@ -13,7 +13,9 @@ async fn fresh_pool() -> (SqlitePool, TempDir) {
     let tmp = TempDir::new().unwrap();
     let path = tmp.path().join("t.db").to_string_lossy().to_string();
     let url = format!("sqlite://{}", path);
-    let opts = SqliteConnectOptions::from_str(&url).unwrap().create_if_missing(true);
+    let opts = SqliteConnectOptions::from_str(&url)
+        .unwrap()
+        .create_if_missing(true);
     let pool = SqlitePoolOptions::new()
         .max_connections(1)
         .connect_with(opts)
@@ -90,7 +92,10 @@ async fn t02_sync_feed_upstream_500_writes_fetch_error() {
         user_agent: None,
     };
     let err = sync_feed(&pool, f.id, &cfg).await.expect_err("should fail");
-    assert!(matches!(err, feed_engine::FeedEngineError::UpstreamStatus(500)));
+    assert!(matches!(
+        err,
+        feed_engine::FeedEngineError::UpstreamStatus(500)
+    ));
     let f2 = feeds.get(f.id).await.unwrap();
     assert!(f2.fetch_error.is_some(), "fetch_error should be set");
 }

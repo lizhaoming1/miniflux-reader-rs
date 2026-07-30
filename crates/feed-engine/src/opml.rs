@@ -51,8 +51,12 @@ pub fn export_opml(feeds: &[Feed]) -> String {
     opml.push_attribute(("version", "2.0"));
     writer.write_event(Event::Start(opml)).ok();
 
-    writer.write_event(Event::Start(BytesStart::new("head"))).ok();
-    writer.write_event(Event::Start(BytesStart::new("title"))).ok();
+    writer
+        .write_event(Event::Start(BytesStart::new("head")))
+        .ok();
+    writer
+        .write_event(Event::Start(BytesStart::new("title")))
+        .ok();
     writer
         .write_event(Event::Text(BytesText::new(
             "miniflux-reader-rs subscriptions",
@@ -61,7 +65,9 @@ pub fn export_opml(feeds: &[Feed]) -> String {
     writer.write_event(Event::End(BytesEnd::new("title"))).ok();
     writer.write_event(Event::End(BytesEnd::new("head"))).ok();
 
-    writer.write_event(Event::Start(BytesStart::new("body"))).ok();
+    writer
+        .write_event(Event::Start(BytesStart::new("body")))
+        .ok();
     for f in feeds {
         let mut outline = BytesStart::new("outline");
         outline.push_attribute(("type", "rss"));

@@ -10,7 +10,7 @@ pub mod logging;
 pub mod routes;
 pub mod state;
 
-pub use config::{load, AppConfig, FeedCfg, PathsCfg, TtsCfg, TranslateCfg};
+pub use config::{load, AppConfig, FeedCfg, PathsCfg, TranslateCfg, TtsCfg};
 pub use error::AppHttpError;
 pub use logging::{init_tracing, init_tracing_with_filter};
 pub use routes::build_axum_routes;

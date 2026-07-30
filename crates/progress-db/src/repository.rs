@@ -120,12 +120,10 @@ impl FeedRepository {
     /// populated on first successful sync.
     pub async fn add(&self, url: &str) -> Result<Feed> {
         // Try insert first.
-        let insert = sqlx::query(
-            "INSERT OR IGNORE INTO feeds (url) VALUES (?)",
-        )
-        .bind(url)
-        .execute(&self.pool)
-        .await?;
+        let insert = sqlx::query("INSERT OR IGNORE INTO feeds (url) VALUES (?)")
+            .bind(url)
+            .execute(&self.pool)
+            .await?;
         let _ = insert;
         self.get_by_url(url).await
     }
@@ -195,14 +193,12 @@ impl FeedRepository {
 
     /// Update title and site_url (used after a successful parse).
     pub async fn update_metadata(&self, id: i64, title: &str, site_url: &str) -> Result<()> {
-        sqlx::query(
-            "UPDATE feeds SET title = ?, site_url = ? WHERE id = ?",
-        )
-        .bind(title)
-        .bind(site_url)
-        .bind(id)
-        .execute(&self.pool)
-        .await?;
+        sqlx::query("UPDATE feeds SET title = ?, site_url = ? WHERE id = ?")
+            .bind(title)
+            .bind(site_url)
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
         Ok(())
     }
 }
@@ -229,13 +225,12 @@ impl ArticleRepository {
         // SQLite's last_insert_rowid() is not reset on the ON CONFLICT
         // DO UPDATE path, so it cannot distinguish insert from update.
         // A pre-check is the simplest reliable approach.
-        let existing: Option<(i64,)> = sqlx::query_as(
-            "SELECT id FROM articles WHERE feed_id = ? AND guid = ?",
-        )
-        .bind(feed_id)
-        .bind(&a.guid)
-        .fetch_optional(&self.pool)
-        .await?;
+        let existing: Option<(i64,)> =
+            sqlx::query_as("SELECT id FROM articles WHERE feed_id = ? AND guid = ?")
+                .bind(feed_id)
+                .bind(&a.guid)
+                .fetch_optional(&self.pool)
+                .await?;
         let is_new = existing.is_none();
 
         sqlx::query(
@@ -264,7 +259,12 @@ impl ArticleRepository {
 
     /// Return all articles, newest first, paginated. `feed_id = None`
     /// lists across all feeds.
-    pub async fn list_all(&self, feed_id: Option<i64>, limit: u32, offset: u32) -> Result<Vec<Article>> {
+    pub async fn list_all(
+        &self,
+        feed_id: Option<i64>,
+        limit: u32,
+        offset: u32,
+    ) -> Result<Vec<Article>> {
         let sql = match feed_id {
             Some(_) => "SELECT a.id, a.feed_id, a.guid, a.title, a.url, a.author, a.summary, a.content_html, a.published_at, a.read
                         FROM articles a WHERE a.feed_id = ?
@@ -332,8 +332,17 @@ impl ArticleRepository {
     /// Mark all articles read. `feed_id = None` means every article.
     pub async fn mark_all_read(&self, feed_id: Option<i64>) -> Result<()> {
         match feed_id {
-            Some(fid) => sqlx::query("UPDATE articles SET read = 1 WHERE feed_id = ?").bind(fid).execute(&self.pool).await?,
-            None => sqlx::query("UPDATE articles SET read = 1").execute(&self.pool).await?,
+            Some(fid) => {
+                sqlx::query("UPDATE articles SET read = 1 WHERE feed_id = ?")
+                    .bind(fid)
+                    .execute(&self.pool)
+                    .await?
+            }
+            None => {
+                sqlx::query("UPDATE articles SET read = 1")
+                    .execute(&self.pool)
+                    .await?
+            }
         };
         Ok(())
     }
@@ -384,10 +393,9 @@ impl SettingsRepository {
 
     /// Return every (key, value) pair. Empty table returns empty map.
     pub async fn get_all(&self) -> Result<HashMap<String, String>> {
-        let rows: Vec<(String, String)> =
-            sqlx::query_as("SELECT key, value FROM settings")
-                .fetch_all(&self.pool)
-                .await?;
+        let rows: Vec<(String, String)> = sqlx::query_as("SELECT key, value FROM settings")
+            .fetch_all(&self.pool)
+            .await?;
         let mut m = HashMap::with_capacity(rows.len());
         for (k, v) in rows {
             m.insert(k, v);
@@ -397,11 +405,10 @@ impl SettingsRepository {
 
     /// Return a single setting or `None` if absent.
     pub async fn get(&self, key: &str) -> Result<Option<String>> {
-        let row: Option<(String,)> =
-            sqlx::query_as("SELECT value FROM settings WHERE key = ?")
-                .bind(key)
-                .fetch_optional(&self.pool)
-                .await?;
+        let row: Option<(String,)> = sqlx::query_as("SELECT value FROM settings WHERE key = ?")
+            .bind(key)
+            .fetch_optional(&self.pool)
+            .await?;
         Ok(row.map(|r| r.0))
     }
 

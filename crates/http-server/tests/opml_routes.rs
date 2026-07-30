@@ -27,7 +27,7 @@ async fn test_state() -> AppState {
     AppState::new(
         pool,
         Arc::new(services::MockTranslateService::with_fixed_vec(vec![
-            "你好".to_string(),
+            "你好".to_string()
         ])),
         Arc::new(services::MockTtsService::default()),
         dir_path.join("epubs"),
@@ -69,7 +69,11 @@ async fn t01_export_empty_returns_valid_xml() {
         ct
     );
     let body = body_string(resp).await;
-    assert!(body.contains("<opml"), "body should contain <opml> tag: {}", body);
+    assert!(
+        body.contains("<opml"),
+        "body should contain <opml> tag: {}",
+        body
+    );
 }
 
 // ---------- T2: import OPML with 1 feed, then export contains the URL ----------

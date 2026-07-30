@@ -16,5 +16,6 @@ pub use error::{DbError, Result as DbResult};
 pub use migrate::run_migrations;
 pub use models::{Article, Book, Feed, ReadingProgress};
 pub use repository::{
-    ArticleRepository, ArticleUpsert, BookRepository, FeedRepository, ProgressRepository, SettingsRepository,
+    ArticleRepository, ArticleUpsert, BookRepository, FeedRepository, ProgressRepository,
+    SettingsRepository,
 };

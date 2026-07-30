@@ -8,8 +8,14 @@ async fn fresh_pool() -> (SqlitePool, TempDir) {
     let tmp = TempDir::new().unwrap();
     let path = tmp.path().join("t.db").to_string_lossy().to_string();
     let url = format!("sqlite://{}", path);
-    let opts = SqliteConnectOptions::from_str(&url).unwrap().create_if_missing(true);
-    let pool = SqlitePoolOptions::new().max_connections(1).connect_with(opts).await.unwrap();
+    let opts = SqliteConnectOptions::from_str(&url)
+        .unwrap()
+        .create_if_missing(true);
+    let pool = SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect_with(opts)
+        .await
+        .unwrap();
     run_migrations(&pool).await.unwrap();
     (pool, tmp)
 }

@@ -8,8 +8,14 @@ async fn fresh_pool() -> (SqlitePool, TempDir) {
     let tmp = TempDir::new().unwrap();
     let path = tmp.path().join("t.db").to_string_lossy().to_string();
     let url = format!("sqlite://{}", path);
-    let opts = SqliteConnectOptions::from_str(&url).unwrap().create_if_missing(true);
-    let pool = SqlitePoolOptions::new().max_connections(1).connect_with(opts).await.unwrap();
+    let opts = SqliteConnectOptions::from_str(&url)
+        .unwrap()
+        .create_if_missing(true);
+    let pool = SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect_with(opts)
+        .await
+        .unwrap();
     run_migrations(&pool).await.unwrap();
     (pool, tmp)
 }
@@ -32,7 +38,10 @@ async fn t02_set_many_then_get_all() {
     repo.set_many(&in_map).await.unwrap();
     let out = repo.get_all().await.unwrap();
     assert_eq!(out.len(), 2);
-    assert_eq!(out.get("feed.poll_interval_secs"), Some(&"1200".to_string()));
+    assert_eq!(
+        out.get("feed.poll_interval_secs"),
+        Some(&"1200".to_string())
+    );
     assert_eq!(out.get("tts.voice"), Some(&"custom-voice".to_string()));
 }
 

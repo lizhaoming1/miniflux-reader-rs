@@ -27,7 +27,7 @@ async fn test_state() -> AppState {
     AppState::new(
         pool,
         Arc::new(services::MockTranslateService::with_fixed_vec(vec![
-            "你好".to_string(),
+            "你好".to_string()
         ])),
         Arc::new(services::MockTtsService::default()),
         dir_path.join("epubs"),

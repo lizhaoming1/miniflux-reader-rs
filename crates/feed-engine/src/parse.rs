@@ -107,10 +107,7 @@ pub fn parse_feed_bytes(bytes: &[u8]) -> Result<ParsedFeed> {
             .map(|s| s.content.clone())
             .unwrap_or_default();
         let content_html = entry.content.as_ref().and_then(|c| c.body.clone());
-        let published_at = entry
-            .published
-            .or(entry.updated)
-            .unwrap_or_else(Utc::now);
+        let published_at = entry.published.or(entry.updated).unwrap_or_else(Utc::now);
         articles.push(ParsedArticle {
             guid,
             title,

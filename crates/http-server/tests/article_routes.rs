@@ -31,7 +31,7 @@ async fn test_state() -> AppState {
     AppState::new(
         pool,
         Arc::new(services::MockTranslateService::with_fixed_vec(vec![
-            "你好".to_string(),
+            "你好".to_string()
         ])),
         Arc::new(services::MockTtsService::default()),
         dir_path.join("epubs"),
@@ -49,7 +49,10 @@ async fn body_string(resp: axum::response::Response) -> String {
 /// the set_read test so the route has a row to operate on.
 async fn seed_one_article(state: &AppState) -> i64 {
     let feeds = FeedRepository::new(state.db.clone());
-    let f = feeds.add("https://seed.example.com/rss").await.expect("add");
+    let f = feeds
+        .add("https://seed.example.com/rss")
+        .await
+        .expect("add");
     let arts = ArticleRepository::new(state.db.clone());
     let ups = ArticleUpsert {
         guid: "seed-guid-1".into(),
