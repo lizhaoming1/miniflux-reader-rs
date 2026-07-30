@@ -226,7 +226,19 @@ impl ArticleRepository {
     /// Upsert an article row keyed on (feed_id, guid). All scalar fields
     /// are updated on conflict. Returns `true` if a new row was inserted.
     pub async fn upsert(&self, feed_id: i64, a: &ArticleUpsert) -> Result<bool> {
-        let r = sqlx::query(
+        // SQLite's last_insert_rowid() is not reset on the ON CONFLICT
+        // DO UPDATE path, so it cannot distinguish insert from update.
+        // A pre-check is the simplest reliable approach.
+        let existing: Option<(i64,)> = sqlx::query_as(
+            "SELECT id FROM articles WHERE feed_id = ? AND guid = ?",
+        )
+        .bind(feed_id)
+        .bind(&a.guid)
+        .fetch_optional(&self.pool)
+        .await?;
+        let is_new = existing.is_none();
+
+        sqlx::query(
             "INSERT INTO articles (feed_id, guid, title, url, author, summary, content_html, published_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
              ON CONFLICT(feed_id, guid) DO UPDATE SET
@@ -247,7 +259,7 @@ impl ArticleRepository {
         .bind(&a.published_at)
         .execute(&self.pool)
         .await?;
-        Ok(r.rows_affected() == 1 && r.last_insert_rowid() != 0)
+        Ok(is_new)
     }
 
     /// Return all articles, newest first, paginated. `feed_id = None`
