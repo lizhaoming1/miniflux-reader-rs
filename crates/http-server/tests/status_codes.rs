@@ -1,20 +1,18 @@
 //! PR#6 Phase D — `routes.rs` status code TDD.
 //!
-//! With the proxy fallback (Phase F), unmatched routes are forwarded to
-//! the Miniflux upstream. These tests verify the fallback behaviour:
-//! upstream 404 passes through, and malformed JSON still returns 400.
+//! v0.2.0 removed the catch-all Miniflux proxy fallback. These tests
+//! verify the remaining status-code behaviour: unmatched routes return
+//! 404 directly from Axum, and malformed JSON still returns 400.
 
 use http_server::{build_axum_routes, AppState};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::str::FromStr;
 use std::sync::Arc;
 use tower::ServiceExt;
-use wiremock::matchers::{method, path};
-use wiremock::{Mock, MockServer, ResponseTemplate};
 
 // ---------- helpers ----------
 
-async fn test_state(miniflux_url: &str) -> AppState {
+async fn test_state() -> AppState {
     let dir = tempfile::tempdir().expect("tempdir");
     let dir_path = dir.keep();
     let db_path = dir_path.join("test.db");
@@ -35,23 +33,15 @@ async fn test_state(miniflux_url: &str) -> AppState {
             "你好".to_string()
         ])),
         Arc::new(services::MockTtsService::default()),
-        Arc::new(services::MinifluxClient::new(miniflux_url)),
         dir_path.join("epubs"),
     )
 }
 
-// ---------- T0: unknown route → upstream 404 passes through ----------
+// ---------- T0: unknown route → 404 ----------
 
 #[tokio::test]
-async fn t0_unknown_route_upstream_404_passes_through() {
-    let server = MockServer::start().await;
-    Mock::given(method("GET"))
-        .and(path("/nonexistent-route"))
-        .respond_with(ResponseTemplate::new(404))
-        .mount(&server)
-        .await;
-
-    let state = test_state(&server.uri()).await;
+async fn t0_unknown_route_returns_404() {
+    let state = test_state().await;
     let app = build_axum_routes(state);
     let resp = app
         .oneshot(
@@ -70,7 +60,7 @@ async fn t0_unknown_route_upstream_404_passes_through() {
 
 #[tokio::test]
 async fn t1_malformed_json_returns_400() {
-    let state = test_state("http://localhost:1").await;
+    let state = test_state().await;
     let app = build_axum_routes(state);
     let resp = app
         .oneshot(

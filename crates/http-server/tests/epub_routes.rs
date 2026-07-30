@@ -34,7 +34,6 @@ async fn test_state() -> AppState {
             "你好".to_string()
         ])),
         Arc::new(services::MockTtsService::default()),
-        Arc::new(services::MinifluxClient::new("http://localhost:1")),
         dir_path.join("epubs"),
     )
 }

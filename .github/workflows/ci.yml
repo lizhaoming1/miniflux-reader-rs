@@ -50,7 +50,7 @@ jobs:
           echo "Test result summary (cargo test output above must show ≥100 passed)"
           cargo test --workspace --no-fail-fast 2>&1 | grep "test result:" || true
 
-  # ---- Mandatory check #4: sqlx migrations reach v6 ----
+  # ---- Mandatory check #4: sqlx migrations reach v9 ----
   migrate:
     name: sqlx migrate verify
     runs-on: ubuntu-latest
@@ -59,7 +59,7 @@ jobs:
       - name: Install system deps
         run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev sqlite3
       - uses: Swatinem/rust-cache@v2
-      - name: Run migrations on a fresh SQLite DB and verify version=6
+      - name: Run migrations on a fresh SQLite DB and verify version=9
         run: |
           cargo build -p progress-db --tests
           # Use a throwaway example that calls run_migrations + queries _sqlx_migrations
@@ -75,8 +75,8 @@ jobs:
               progress_db::run_migrations(&pool).await?;
               let (v,): (i64,) = sqlx::query_as("SELECT MAX(version) FROM _sqlx_migrations").fetch_one(&pool).await?;
               let (c,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM _sqlx_migrations").fetch_one(&pool).await?;
-              assert_eq!(v, 6, "migration version must be 6, got {v}");
-              assert_eq!(c, 6, "migration count must be 6, got {c}");
+              assert_eq!(v, 9, "migration version must be 9, got {v}");
+              assert_eq!(c, 9, "migration count must be 9, got {c}");
               println!("MIGRATE_OK version={v} count={c}");
               Ok(())
           }
@@ -98,10 +98,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build Docker image (no push)
-        run: docker build -t miniflux-reader-rs:v0.1.0 .
+        run: docker build -t miniflux-reader-rs:v0.2.0 .
       - name: Smoke test — container starts and listens on :8083
         run: |
-          docker run -d --name smoke -p 8083:8083 miniflux-reader-rs:v0.1.0
+          docker run -d --name smoke -p 8083:8083 miniflux-reader-rs:v0.2.0
           sleep 3
           # Container should still be running (didn't crash on startup)
           docker ps --filter name=smoke --format "{{.Status}}" | grep -q "Up"
