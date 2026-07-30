@@ -9,7 +9,9 @@
 
 use common_text::BilingualSentence;
 use leptos::prelude::*;
-use leptos_app::{BookInfo, BookReader, Bookshelf, ArticleReader, ToggleLang};
+use leptos_app::{
+    ArticleList, ArticleReader, BookInfo, BookReader, Bookshelf, FeedInfo, FeedList, ToggleLang,
+};
 
 /// Helper: wrap a closure in a fresh reactive `Owner` so signals/arenas work.
 fn with_owner<T>(f: impl FnOnce() -> T) -> T {
@@ -121,5 +123,54 @@ fn t3b_article_reader_toggle_bilingual_shows_zh() {
     assert!(
         html.contains("你好世界"),
         "Bilingual mode should render zh text, got: {html}"
+    );
+}
+
+// ---------- T4: FeedList empty state renders "No feeds yet" ----------
+
+#[test]
+fn t4_feedlist_empty_state() {
+    let html = with_owner(|| view! { <FeedList feeds=vec![] /> }.to_html());
+    assert!(
+        html.contains("No feeds yet"),
+        "expected empty-state text, got: {html}"
+    );
+}
+
+// ---------- T5: FeedList with 2 feeds renders titles + unread_count ----------
+
+#[test]
+fn t5_feedlist_two_items() {
+    let feeds = vec![
+        FeedInfo {
+            id: 1,
+            title: "HN".into(),
+            site_url: "".into(),
+            unread_count: 3,
+        },
+        FeedInfo {
+            id: 2,
+            title: "LWN".into(),
+            site_url: "".into(),
+            unread_count: 0,
+        },
+    ];
+    let html = with_owner(|| view! { <FeedList feeds=feeds.clone() /> }.to_html());
+    assert!(html.contains("HN"), "missing title HN; html: {html}");
+    assert!(html.contains("LWN"), "missing title LWN; html: {html}");
+    assert!(
+        html.contains(">3<"),
+        "missing unread count 3; html: {html}"
+    );
+}
+
+// ---------- T6: ArticleList empty state renders "No articles" ----------
+
+#[test]
+fn t6_articlelist_empty_state() {
+    let html = with_owner(|| view! { <ArticleList articles=vec![] /> }.to_html());
+    assert!(
+        html.contains("No articles"),
+        "expected empty-state text, got: {html}"
     );
 }

@@ -11,7 +11,9 @@
 
 use common_text::BilingualSentence;
 use leptos::prelude::*;
-use leptos_app::{debounce_fire_count, BilingualToggle, TtsPlayer, UploadForm};
+use leptos_app::{
+    debounce_fire_count, AddFeedForm, BilingualToggle, SettingsPage, TtsPlayer, UploadForm,
+};
 
 /// Helper: wrap a closure in a fresh reactive `Owner` so signals/arenas work.
 fn with_owner<T>(f: impl FnOnce() -> T) -> T {
@@ -139,4 +141,42 @@ fn t7b_tts_player_shows_audio_when_playing() {
         html.contains("/tts?text="),
         "audio src should start with /tts?text=, got: {html}"
     );
+}
+
+// ---------- C4: AddFeedForm renders POST /feeds action + url input ----------
+
+#[test]
+fn c4_addfeedform_renders_action_and_url_input() {
+    let html = with_owner(|| view! { <AddFeedForm /> }.to_html());
+    assert!(
+        html.contains("action=\"/feeds\""),
+        "expected action=/feeds, got: {html}"
+    );
+    assert!(
+        html.contains("type=\"url\""),
+        "expected type=url input, got: {html}"
+    );
+}
+
+// ---------- C5: SettingsPage renders PUT /settings + 5 named fields ----------
+
+#[test]
+fn c5_settingspage_renders_five_fields_and_put() {
+    let html = with_owner(|| view! { <SettingsPage /> }.to_html());
+    assert!(
+        html.contains("action=\"/settings\""),
+        "expected action=/settings, got: {html}"
+    );
+    for field in &[
+        "feed.poll_interval_secs",
+        "feed.fetch_timeout_secs",
+        "feed.user_agent",
+        "translate.target_lang",
+        "tts.voice",
+    ] {
+        assert!(
+            html.contains(&format!("name=\"{field}\"")),
+            "missing field {field}; html: {html}"
+        );
+    }
 }
