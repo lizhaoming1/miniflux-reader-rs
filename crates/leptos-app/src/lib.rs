@@ -4,12 +4,14 @@
 pub mod app {
     /// Placeholder App. Real Leptos view! { <Router> ... routes ... </Router> } in PR#7.
     #[leptos::component]
-    pub fn App() -> impl leptos::IntoView { () }
+    pub fn App() -> impl leptos::IntoView {
+        ()
+    }
 }
 pub use app::App;
 
-pub mod bookshelf    {}
-pub mod book_reader  {}
+pub mod bookshelf {}
+pub mod book_reader {}
 pub mod miniflux_article {}
-pub mod server_fns   {}
+pub mod server_fns {}
 pub mod error_boundary {}
