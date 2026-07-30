@@ -55,6 +55,7 @@ pub fn build_axum_routes(state: AppState) -> Router {
             "/epub/upload",
             post(upload_epub).layer(axum::extract::DefaultBodyLimit::max(EPUB_UPLOAD_LIMIT)),
         )
+        .route("/epub/api/books", get(list_books))
         .route(
             "/epub/api/progress/:safe_name",
             get(get_progress).post(save_progress),
@@ -76,7 +77,7 @@ async fn healthz(_state: State<AppState>) -> Result<impl IntoResponse, AppHttpEr
 }
 
 async fn upload_epub(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse, AppHttpError> {
     while let Some(field) = multipart
@@ -94,6 +95,24 @@ async fn upload_epub(
                 return Err(AppHttpError::BadRequest("file too large".into()));
             }
             let safe_name = epub_lib::save_upload_to_disk(&bytes, &filename)?;
+            // Parse EPUB metadata and persist a Book row.
+            let (title, author, total_chapters) =
+                match epub_lib::EpubReader::from_bytes(&bytes) {
+                    Ok(epub) => (
+                        epub.metadata.title,
+                        epub.metadata.author,
+                        epub.metadata.total_chapters as i64,
+                    ),
+                    Err(_e) => (safe_name.clone(), String::new(), 0),
+                };
+            let book = progress_db::Book {
+                safe_name: safe_name.clone(),
+                title: if title.is_empty() { safe_name.clone() } else { title },
+                author,
+                total_chapters,
+                file_size: bytes.len() as i64,
+            };
+            let _ = state.book_repo.upsert(&book).await;
             return Ok(Json(json!({ "ok": true, "safe_name": safe_name })));
         }
     }
@@ -118,6 +137,22 @@ async fn save_progress(
     let repo = progress_db::ProgressRepository::new(state.db);
     repo.save(&p).await?;
     Ok(Json(json!({ "ok": true })))
+}
+
+/// List all uploaded EPUBs as `BookInfo` JSON rows, newest first.
+async fn list_books(State(state): State<AppState>) -> Result<impl IntoResponse, AppHttpError> {
+    let books = state.book_repo.list().await?;
+    let out: Vec<_> = books
+        .into_iter()
+        .map(|b| {
+            json!({
+                "safe_name": b.safe_name,
+                "title": b.title,
+                "author": b.author,
+            })
+        })
+        .collect();
+    Ok(Json(out))
 }
 
 async fn translate(

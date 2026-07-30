@@ -50,6 +50,9 @@ pub struct PathsCfg {
     pub epub_dir: String,
     /// Directory for static inject assets (e.g. `_inject_rs.js`).
     pub static_inject: String,
+    /// Directory containing the wasm `pkg/` bundle produced by `cargo-leptos`.
+    /// Defaults to `pkg` relative to the working directory when omitted.
+    pub pkg_dir: Option<String>,
 }
 
 /// Translation backend settings.

@@ -4,7 +4,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use progress_db::{ArticleRepository, FeedRepository, SettingsRepository};
+use progress_db::{ArticleRepository, BookRepository, FeedRepository, SettingsRepository};
 use services::{TranslateService, TtsService};
 use sqlx::SqlitePool;
 
@@ -24,6 +24,8 @@ pub struct AppState {
     pub feed_repo: FeedRepository,
     /// Article repository (articles table).
     pub article_repo: ArticleRepository,
+    /// Book repository (books table).
+    pub book_repo: BookRepository,
     /// Runtime settings repository.
     pub settings_repo: SettingsRepository,
     /// Directory where uploaded EPUB files are stored.
@@ -40,6 +42,7 @@ impl AppState {
     ) -> Self {
         let feed_repo = FeedRepository::new(db.clone());
         let article_repo = ArticleRepository::new(db.clone());
+        let book_repo = BookRepository::new(db.clone());
         let settings_repo = SettingsRepository::new(db.clone());
         Self {
             db,
@@ -47,6 +50,7 @@ impl AppState {
             tts,
             feed_repo,
             article_repo,
+            book_repo,
             settings_repo,
             epub_dir,
         }
