@@ -1357,6 +1357,7 @@ dependencies = [
  "chrono",
  "common-text",
  "epub-lib",
+ "feed-engine",
  "http 1.5.0",
  "leptos",
  "leptos-app",

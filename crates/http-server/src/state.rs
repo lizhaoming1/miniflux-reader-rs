@@ -1,15 +1,16 @@
-//! Shared application state, cloned cheaply via `Arc` internals.
+//! Shared application state, cloned cheaply via `Arc` internals or
+//! cheaply-cloneable structs.
 
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use services::{MinifluxClient, TranslateService, TtsService};
+use progress_db::{ArticleRepository, FeedRepository, SettingsRepository};
+use services::{TranslateService, TtsService};
 use sqlx::SqlitePool;
 
-/// Application state shared across all Axum handlers and the Tower
-/// catch-all proxy layer.
+/// Application state shared across all Axum handlers.
 ///
-/// Every field is either an `Arc` or an internally-`Arc`'d type, so
+/// Every field is either an `Arc` or an internally-Arc'd type, so
 /// cloning `AppState` is cheap and safe.
 #[derive(Clone)]
 pub struct AppState {
@@ -19,8 +20,12 @@ pub struct AppState {
     pub translate: Arc<dyn TranslateService>,
     /// TTS service (Mock or Reqwest).
     pub tts: Arc<dyn TtsService>,
-    /// Miniflux HTTP client for login + request forwarding.
-    pub miniflux: Arc<MinifluxClient>,
+    /// Feed repository (feeds table).
+    pub feed_repo: FeedRepository,
+    /// Article repository (articles table).
+    pub article_repo: ArticleRepository,
+    /// Runtime settings repository.
+    pub settings_repo: SettingsRepository,
     /// Directory where uploaded EPUB files are stored.
     pub epub_dir: PathBuf,
 }
@@ -31,14 +36,18 @@ impl AppState {
         db: SqlitePool,
         translate: Arc<dyn TranslateService>,
         tts: Arc<dyn TtsService>,
-        miniflux: Arc<MinifluxClient>,
         epub_dir: PathBuf,
     ) -> Self {
+        let feed_repo = FeedRepository::new(db.clone());
+        let article_repo = ArticleRepository::new(db.clone());
+        let settings_repo = SettingsRepository::new(db.clone());
         Self {
             db,
             translate,
             tts,
-            miniflux,
+            feed_repo,
+            article_repo,
+            settings_repo,
             epub_dir,
         }
     }

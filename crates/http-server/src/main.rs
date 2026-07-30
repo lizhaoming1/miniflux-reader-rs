@@ -1,13 +1,16 @@
 //! Binary entry point for `http-server`.
 //!
 //! Loads `rust-config.json`, initialises tracing, creates the SQLite pool
-//! and services, builds the Axum router (with catch-all Miniflux proxy
-//! fallback), and starts serving.
+//! and services, builds the Axum router with feed/article/opml/settings
+//! routes, and starts serving. The background RSS poller task is spawned
+//! before entering the serve loop.
 
 use std::sync::Arc;
+use std::time::Duration;
 
+use feed_engine::sync::{start_poller, SyncConfig};
 use http_server::{build_axum_routes, init_tracing_with_filter, load, AppState};
-use services::{MinifluxClient, ReqwestTranslateService, ReqwestTtsService};
+use services::{ReqwestTranslateService, ReqwestTtsService};
 use sqlx::sqlite::SqliteConnectOptions;
 use sqlx::SqlitePool;
 
@@ -48,18 +51,28 @@ async fn main() -> anyhow::Result<()> {
     std::env::set_var("RUST_EPUB_BOOKS_DIR", &cfg.paths.epub_dir);
 
     // ---- Services ----
-    let miniflux = Arc::new(MinifluxClient::new(&cfg.miniflux.url));
     let translate: Arc<dyn services::TranslateService> = Arc::new(ReqwestTranslateService);
     let tts: Arc<dyn services::TtsService> = Arc::new(ReqwestTtsService);
 
     // ---- Application state ----
     let state = AppState::new(
-        pool,
+        pool.clone(),
         translate,
         tts,
-        miniflux,
         std::path::PathBuf::from(&cfg.paths.epub_dir),
     );
+
+    // ---- Background poller ----
+    {
+        let pool_c = pool.clone();
+        let sync_cfg = SyncConfig {
+            fetch_timeout: Duration::from_secs(cfg.feed.fetch_timeout_secs),
+            user_agent: Some(cfg.feed.user_agent.clone()),
+        };
+        let interval = Duration::from_secs(cfg.feed.poll_interval_secs);
+        tokio::spawn(async move { start_poller(pool_c, interval, sync_cfg).await });
+        tracing::info!(interval_s = cfg.feed.poll_interval_secs, "RSS poller started");
+    }
 
     // ---- Server ----
     let app = build_axum_routes(state);
