@@ -1,5 +1,5 @@
-//! `<MinifluxArticle/>` — renders a Miniflux article body with optional
-//! bilingual translation.
+//! `<ArticleReader/>` — renders an article body with optional bilingual
+//! translation.
 //!
 //! When `lang` is [`ToggleLang::Original`], only the source sentences are
 //! rendered. When `lang` is [`ToggleLang::Bilingual`], each source sentence
@@ -11,12 +11,12 @@ use common_text::BilingualSentence;
 
 use crate::ToggleLang;
 
-/// Miniflux article view with toggleable bilingual rendering.
+/// Article view with toggleable bilingual rendering.
 #[component]
-pub fn MinifluxArticle(sentences: Vec<BilingualSentence>, lang: ToggleLang) -> impl IntoView {
+pub fn ArticleReader(sentences: Vec<BilingualSentence>, lang: ToggleLang) -> impl IntoView {
     match lang {
         ToggleLang::Original => view! {
-            <div class="miniflux-article" data-bilingual="0">
+            <div class="article-reader" data-bilingual="0">
                 <For each=move || sentences.clone() key=|s| s.src_start let:s>
                     <p class="sentence">{s.src.clone()}</p>
                 </For>
@@ -24,7 +24,7 @@ pub fn MinifluxArticle(sentences: Vec<BilingualSentence>, lang: ToggleLang) -> i
         }
         .into_any(),
         ToggleLang::Bilingual => view! {
-            <div class="miniflux-article" data-bilingual="1">
+            <div class="article-reader" data-bilingual="1">
                 <For each=move || sentences.clone() key=|s| s.src_start let:s>
                     <p class="sentence">{s.src.clone()}</p>
                     <p class="sentence--zh">{s.zh.clone()}</p>
@@ -44,7 +44,7 @@ pub fn BilingualToggle(
 ) -> impl IntoView {
     view! {
         <div
-            class="miniflux-article"
+            class="article-reader"
             data-bilingual=move || match lang.get() {
                 ToggleLang::Original => "0",
                 ToggleLang::Bilingual => "1",

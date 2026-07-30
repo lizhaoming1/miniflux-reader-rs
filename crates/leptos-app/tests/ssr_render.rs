@@ -1,6 +1,6 @@
 //! PR#7 SSR render tests — T0..T3.
 //!
-//! Verifies that `<Bookshelf/>`, `<BookReader/>`, and `<MinifluxArticle/>`
+//! Verifies that `<Bookshelf/>`, `<BookReader/>`, and `<ArticleReader/>`
 //! render the expected HTML via `RenderHtml::to_html()` (SSR mode).
 //!
 //! Run with: `cargo test -p leptos-app --features ssr --test ssr_render`
@@ -9,7 +9,7 @@
 
 use common_text::BilingualSentence;
 use leptos::prelude::*;
-use leptos_app::{BookInfo, BookReader, Bookshelf, MinifluxArticle, ToggleLang};
+use leptos_app::{BookInfo, BookReader, Bookshelf, ArticleReader, ToggleLang};
 
 /// Helper: wrap a closure in a fresh reactive `Owner` so signals/arenas work.
 fn with_owner<T>(f: impl FnOnce() -> T) -> T {
@@ -78,10 +78,10 @@ fn t2_book_reader_renders_data_percent_attr() {
     );
 }
 
-// ---------- T3: MinifluxArticle ToggleLang Original → no sentence--zh; Bilingual → present ----------
+// ---------- T3: ArticleReader ToggleLang Original → no sentence--zh; Bilingual → present ----------
 
 #[test]
-fn t3_miniflux_article_toggle_original_hides_zh() {
+fn t3_article_reader_toggle_original_hides_zh() {
     let sentences = vec![BilingualSentence {
         src: "Hello world.".into(),
         zh: "你好世界。".into(),
@@ -90,7 +90,7 @@ fn t3_miniflux_article_toggle_original_hides_zh() {
     }];
     let html = with_owner(|| {
         view! {
-            <MinifluxArticle sentences=sentences.clone() lang=ToggleLang::Original />
+            <ArticleReader sentences=sentences.clone() lang=ToggleLang::Original />
         }
         .to_html()
     });
@@ -101,7 +101,7 @@ fn t3_miniflux_article_toggle_original_hides_zh() {
 }
 
 #[test]
-fn t3b_miniflux_article_toggle_bilingual_shows_zh() {
+fn t3b_article_reader_toggle_bilingual_shows_zh() {
     let sentences = vec![BilingualSentence {
         src: "Hello world.".into(),
         zh: "你好世界。".into(),
@@ -110,7 +110,7 @@ fn t3b_miniflux_article_toggle_bilingual_shows_zh() {
     }];
     let html = with_owner(|| {
         view! {
-            <MinifluxArticle sentences=sentences.clone() lang=ToggleLang::Bilingual />
+            <ArticleReader sentences=sentences.clone() lang=ToggleLang::Bilingual />
         }
         .to_html()
     });
