@@ -14,5 +14,7 @@ pub mod repository;
 
 pub use error::{DbError, Result as DbResult};
 pub use migrate::run_migrations;
-pub use models::{Book, ReadingProgress};
-pub use repository::{BookRepository, ProgressRepository};
+pub use models::{Article, Book, Feed, ReadingProgress};
+pub use repository::{
+    ArticleRepository, ArticleUpsert, BookRepository, FeedRepository, ProgressRepository, SettingsRepository,
+};

@@ -17,6 +17,10 @@ pub enum DbError {
     /// `epub_path`).
     #[error("not found: {0}")]
     NotFound(String),
+
+    /// Ad-hoc internal error with a string message.
+    #[error("{0}")]
+    Internal(String),
 }
 
 /// Convenience `Result` alias.
