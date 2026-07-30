@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "Axum 0.7 entry point. Leptos SSR + Hydration + Tower MinifluxProxy catch-all layer."
+description = "Axum 0.7 entry point. Leptos SSR + Hydration, EPUB reading, built-in RSS feed engine, runtime settings UI."
 
 [[bin]]
 name = "http-server"
@@ -17,6 +17,7 @@ path = "src/lib.rs"
 [dependencies]
 common-text = { path = "../common-text" }
 epub-lib    = { path = "../epub-lib" }
+feed-engine = { path = "../feed-engine" }
 progress-db = { path = "../progress-db" }
 services    = { path = "../services" }
 leptos-app  = { path = "../leptos-app", features = ["ssr"] }
