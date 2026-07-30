@@ -1,0 +1,34 @@
+[package]
+name = "feed-engine"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "RSS/Atom feed parser, article fetcher, OPML support, scheduled poller."
+
+[lib]
+name = "feed_engine"
+path = "src/lib.rs"
+
+[dependencies]
+progress-db = { path = "../progress-db" }
+services    = { path = "../services" }
+
+feed-rs        = { workspace = true }
+readability    = { workspace = true }
+reqwest        = { workspace = true }
+tokio          = { workspace = true }
+quick-xml      = { workspace = true }
+chrono         = { workspace = true }
+serde          = { workspace = true }
+serde_json     = { workspace = true }
+thiserror      = { workspace = true }
+tracing        = { workspace = true }
+anyhow         = { workspace = true }
+sqlx           = { workspace = true }
+bytes          = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+wiremock = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }

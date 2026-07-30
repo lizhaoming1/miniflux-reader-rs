@@ -7,15 +7,16 @@ members = [
     "crates/services",
     "crates/http-server",
     "crates/leptos-app",
+    "crates/feed-engine",
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["lizhaoming1"]
 license = "MIT"
 repository = "https://github.com/lizhaoming1/miniflux-reader-rs"
-description = "Rust rewrite of miniflux-reader: Axum + Leptos 0.7 SSR + Hydration MVP"
+description = "Unified reading platform: EPUB + RSS with bilingual translation + TTS"
 rust-version = "1.92"
 
 [workspace.dependencies]
@@ -44,7 +45,6 @@ leptos_router = { version = "0.7", default-features = false }
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "sqlite", "chrono", "migrate", "macros"] }
 
 # ---- HTML / EPUB / Text ----
-scraper = "0.21"
 html5ever = "0.27"
 zip = { version = "2", default-features = false, features = ["deflate"] }
 quick-xml = { version = "0.36", features = ["serialize"] }
@@ -66,6 +66,9 @@ chrono = { version = "0.4", features = ["serde"] }
 # ---- Testing ----
 tempfile = "3"
 wiremock = "0.6"
+
+feed-rs = "1.4"
+readability = "0.3"
 
 [profile.release]
 opt-level = 3
