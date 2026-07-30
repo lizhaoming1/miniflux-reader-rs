@@ -176,8 +176,9 @@ pub async fn start_poller(pool: SqlitePool, interval: Duration) {
 ```
 migrations/
 ├── 001-006               已有
-├── 007_create_feeds.sql  新增
-└── 008_create_articles.sql 新增
+├── 007_create_feeds.sql      新增
+├── 008_create_articles.sql  新增
+└── 009_create_settings.sql  新增
 ```
 
 ### 4.2 007_create_feeds.sql
@@ -270,8 +271,21 @@ pub struct Article {
 ### 4.6 不变项
 
 - ReadingProgress / ProgressRepository / BookRepository / Book — 完全不动
-- run_migrations 函数 — 不动，自动包含新 migration
+- run_migrations 函数 — 不动，自动包含新 migration（含 009_create_settings.sql）
 - DbError 枚举 — 不动（已有 Sqlx + Migrate + NotFound）
+
+### 4.7 新增 SettingsRepository
+
+```rust
+pub struct SettingsRepository { pool: SqlitePool }
+impl SettingsRepository {
+    pub async fn get_all(&self) -> Result<HashMap<String, String>>;
+    pub async fn get(&self, key: &str) -> Result<Option<String>>;
+    pub async fn set_many(&self, entries: &HashMap<String, String>) -> Result<()>;
+}
+```
+
+详见第 13 节后台设置界面。
 
 ---
 
@@ -299,6 +313,8 @@ pub struct Article {
 | GET | `/articles/unread-count` | `unread_count` | 未读数量 |
 | POST | `/opml/import` | `opml_import` | OPML 导入（text body） |
 | GET | `/opml/export` | `opml_export` | OPML 导出（text/xml） |
+| GET | `/settings` | `get_settings` | 返回当前所有可改配置（JSON） |
+| PUT | `/settings` | `update_settings` | 批量更新配置（body: `{"key":"value",...}`） |
 
 ### 5.3 保留不变的路由
 
@@ -320,6 +336,7 @@ pub miniflux: Arc<MinifluxClient>
 // 新增
 pub feed_repo: FeedRepository,
 pub article_repo: ArticleRepository,
+pub settings_repo: SettingsRepository,
 ```
 
 `AppState::new` 签名相应调整。`main.rs` 删除 MinifluxClient 构造，新增 repository 构造，并启动 `feed_engine::start_poller` 后台任务。
@@ -392,6 +409,11 @@ pub fn ArticleReader(sentences: Vec<BilingualSentence>, lang: ToggleLang) -> imp
 #[component]
 pub fn OpmlActions() -> impl IntoView;
 // 导入按钮（文件选择 → POST /opml/import）+ 导出链接（GET /opml/export）
+
+#[component]
+pub fn SettingsPage() -> impl IntoView;
+// 表单展示可改配置项（轮询间隔、超时、UA、翻译语言、TTS 语音）
+// 保存按钮 → PUT /settings
 ```
 
 ### 6.3 新增数据模型
@@ -432,6 +454,7 @@ pub struct ArticleSummary {
     <Route path="/" view=HomePage />               // 文章列表（默认首页）
     <Route path="/feeds" view=FeedsPage />          // 订阅源管理
     <Route path="/article/:id" view=ArticlePage />  // 文章阅读
+    <Route path="/settings" view=SettingsPage />     // 运行时设置
     <Route path="/epub" view=BookshelfPage />        // EPUB 书架
     <Route path="/epub/read/:name" view=ReaderPage /> // EPUB 阅读
   </Routes>
@@ -515,13 +538,15 @@ pub struct ArticleSummary {
 | `http-server/tests/opml_routes.rs` | ~3 | 导入/导出 roundtrip |
 | `leptos-app/tests/ssr_render.rs` (新增) | ~3 | FeedList/ArticleList 空状态/非空 |
 | `leptos-app/tests/component_interaction.rs` (新增) | ~3 | AddFeedForm、OpmlActions |
-| 合计新增 | ~46 | |
+| `progress-db/tests/settings_table.rs` | ~3 | get_all 空表、set_many 后 get_all 验证、单 key get |
+| `http-server/tests/settings_routes.rs` | ~2 | GET 返回默认值、PUT 更新后 GET 验证 |
+| 合计新增 | ~51 | |
 
 ### 9.4 测试数量估算
 
-- 删除 20，新增 46，净增 26
-- 最终约 104 - 20 + 46 = **130 个测试**
-- CI migrate 断言更新为 version == 8
+- 删除 20，新增 51，净增 31
+- 最终约 104 - 20 + 51 = **135 个测试**
+- CI migrate 断言更新为 version == 9
 
 ---
 
@@ -532,7 +557,7 @@ pub struct ArticleSummary {
 | fmt | 无变更 |
 | clippy | 无变更（新增 crate 自动纳入 `--workspace`） |
 | test | 无变更（`--workspace` 覆盖新 crate） |
-| migrate | 断言 version == 8，count == 8 |
+| migrate | 断言 version == 9，count == 9 |
 | docker | 镜像标签更新为 v0.2.0 |
 
 ---
@@ -560,3 +585,86 @@ pub struct ArticleSummary {
 ### 12.3 已有不变
 
 reqwest、tokio、sqlx、quick-xml、tracing、thiserror、serde、async-trait — 均已有 workspace 依赖。
+
+---
+
+## 13. 后台设置界面
+
+### 13.1 设计目标
+
+运行时可在 Web 界面修改部分配置，无需重启服务。启动时 JSON 文件提供默认值，settings 表覆盖，运行时以 settings 表为准。
+
+### 13.2 可改配置项
+
+| key | 说明 | 默认来源 |
+|-----|------|---------|
+| `feed.poll_interval_secs` | 轮询间隔（秒） | JSON feed.poll_interval_secs |
+| `feed.fetch_timeout_secs` | 抓取超时（秒） | JSON feed.fetch_timeout_secs |
+| `feed.user_agent` | User-Agent | JSON feed.user_agent |
+| `translate.target_lang` | 翻译目标语言 | JSON translate.target_lang |
+| `tts.voice` | TTS 语音 | JSON tts.voice |
+
+启动固定不可改项：`listen_addr`、`paths.db`、`paths.epub_dir`、`log_filter`。
+
+### 13.3 settings 表
+
+```sql
+-- 009_create_settings.sql
+CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+```
+
+key-value 存储，简单灵活。
+
+### 13.4 SettingsRepository
+
+```rust
+pub struct SettingsRepository { pool: SqlitePool }
+impl SettingsRepository {
+    pub async fn get_all(&self) -> Result<HashMap<String, String>>;
+    pub async fn get(&self, key: &str) -> Result<Option<String>>;
+    pub async fn set_many(&self, entries: &HashMap<String, String>) -> Result<()>;
+}
+```
+
+### 13.5 路由
+
+| 方法 | 路径 | 处理函数 | 说明 |
+|------|------|---------|------|
+| GET | `/settings` | `get_settings` | 返回当前所有可改配置（JSON） |
+| PUT | `/settings` | `update_settings` | 批量更新配置（body: `{"key":"value",...}`） |
+
+### 13.6 运行时生效策略
+
+| 配置项 | 生效方式 |
+|--------|---------|
+| `feed.poll_interval_secs` | poller 每次循环从 DB 读取，下次循环立即生效 |
+| `feed.fetch_timeout_secs` / `user_agent` | 每次 `fetch_feed` 调用前从 DB 读 |
+| `translate.target_lang` | 每次 translate 请求从 DB 读 |
+| `tts.voice` | 每次 tts 请求从 DB 读 |
+
+### 13.7 SettingsPage 组件
+
+```rust
+#[component]
+pub fn SettingsPage() -> impl IntoView;
+// 表单展示可改配置项（轮询间隔、超时、UA、翻译语言、TTS 语音）
+// 保存按钮 → PUT /settings
+```
+
+路由新增 `<Route path="/settings" view=SettingsPage /> // 运行时设置`。
+
+### 13.8 AppState 变更
+
+```rust
+pub settings_repo: SettingsRepository,  // 新增
+```
+
+### 13.9 测试
+
+| 测试文件 | 测试数 | 内容 |
+|---------|--------|------|
+| `progress-db/tests/settings_table.rs` | ~3 | get_all 空表、set_many 后 get_all 验证、单 key get |
+| `http-server/tests/settings_routes.rs` | ~2 | GET 返回默认值、PUT 更新后 GET 验证 |
