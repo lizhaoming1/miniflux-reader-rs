@@ -7,7 +7,7 @@ license.workspace = true
 description = "Leptos 0.7 views: Bookshelf, BookReader, MinifluxArticle + #[server] fns. Compiles both as ssr (axum) and as csr (wasm hydration)."
 
 [lib]
-crate-type = ["lib", "cdylib", "rlib"]
+crate-type = ["lib", "cdylib"]
 
 # Only the `leptos` crate has `ssr`/`csr`/`hydrate` feature bits in 0.7.
 # The integration crates (leptos_axum / leptos_meta / leptos_router) are
@@ -30,5 +30,5 @@ common-text    = { path = "../common-text" }
 [dev-dependencies]
 # NOTE: There is no public `leptos_dom_test` crate on crates.io.
 # PR#7 tests use wasm-bindgen-test + wasm-pack (headless chrome) for
-# component interactions and plain `leptos::ssr::render_to_string` for
-# server-side DOM assertions.
+# browser interactions and `RenderHtml::to_html()` via `leptos::prelude::*`
+# for server-side DOM assertions (SSR mode, `--features ssr`).
