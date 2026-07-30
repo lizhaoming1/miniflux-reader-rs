@@ -112,7 +112,7 @@ fn en_split(text: &str) -> Vec<String> {
             let trimmed = cur.trim_end_matches(|c: char| c.is_whitespace() || c == '.');
             let last_token = trimmed
                 .split(|c: char| !c.is_alphanumeric() && c != '.')
-                .last()
+                .next_back()
                 .unwrap_or("");
             let is_abbr = EN_ABBREV.iter().any(|a| last_token.eq_ignore_ascii_case(a));
             let next_starts_lower = raw[i + 1]

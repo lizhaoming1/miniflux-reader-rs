@@ -16,7 +16,7 @@ pub struct BilingualSentence {
     /// Original-language sentence (exact slice of the source text).
     pub src: String,
     /// Chinese translation produced by `services::TranslateService`.
-    pub zh:  String,
+    pub zh: String,
     /// Inclusive byte start offset into the concatenated original text.
     pub src_start: usize,
     /// Exclusive byte end offset into the concatenated original text.
@@ -26,8 +26,7 @@ pub struct BilingualSentence {
 /// Inline style for the zh `<p>` — a blue left-border accent plus padding
 /// and a deeper-blue text colour — matched exactly to tests and to the
 /// Python implementation's `sentence--zh` CSS class.
-const ZH_P_STYLE: &str =
-    "border-left:3px solid #3f87ff;padding-left:8px;color:#0066cc;";
+const ZH_P_STYLE: &str = "border-left:3px solid #3f87ff;padding-left:8px;color:#0066cc;";
 
 /// Render `sentences` as HTML. Empty input → empty output (no wrapper div).
 ///
@@ -60,10 +59,16 @@ mod unit {
     #[test]
     fn two_sentences_concatenate_two_wrappers() {
         let s1 = BilingualSentence {
-            src: "A.".into(), zh: "甲。".into(), src_start: 0, src_end: 2,
+            src: "A.".into(),
+            zh: "甲。".into(),
+            src_start: 0,
+            src_end: 2,
         };
         let s2 = BilingualSentence {
-            src: "B.".into(), zh: "乙。".into(), src_start: 2, src_end: 4,
+            src: "B.".into(),
+            zh: "乙。".into(),
+            src_start: 2,
+            src_end: 4,
         };
         let html = render_bilingual_div(&[s1, s2]);
         assert_eq!(

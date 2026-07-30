@@ -65,7 +65,10 @@ mod unit {
     fn single_sentence_always_forms_one_chunk_even_on_overflow() {
         let r = chunk_paragraphs(
             vec!["xx".to_string()],
-            &ChunkConfig { max_chars: 1, overlap_sentences: 0 },
+            &ChunkConfig {
+                max_chars: 1,
+                overlap_sentences: 0,
+            },
         );
         assert_eq!(r, vec![vec!["xx".to_string()]]);
     }

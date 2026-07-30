@@ -11,7 +11,10 @@ fn max_chars_smaller_than_first_sentence_keeps_sentence_intact() {
     // still contain exactly that one sentence (we never split inside a
     // sentence; if one sentence overflows it is still kept alone).
     let sents = vec!["abcd".to_string()];
-    let cfg = ChunkConfig { max_chars: 1, overlap_sentences: 0 };
+    let cfg = ChunkConfig {
+        max_chars: 1,
+        overlap_sentences: 0,
+    };
     let chunks = chunk_paragraphs(sents, &cfg);
     assert_eq!(chunks.len(), 1, "overflowing 1-sentence input → 1 chunk");
     assert_eq!(chunks[0], vec!["abcd".to_string()]);
@@ -24,9 +27,16 @@ fn overlap_one_repeats_last_sentence_across_boundary() {
     let s0 = "0123456789".to_string();
     let s1 = "abcdefghij".to_string();
     let sents = vec![s0.clone(), s1.clone()];
-    let cfg = ChunkConfig { max_chars: 10, overlap_sentences: 1 };
+    let cfg = ChunkConfig {
+        max_chars: 10,
+        overlap_sentences: 1,
+    };
     let chunks = chunk_paragraphs(sents, &cfg);
-    assert!(chunks.len() >= 2, "need at least 2 chunks; got {:?}", chunks);
+    assert!(
+        chunks.len() >= 2,
+        "need at least 2 chunks; got {:?}",
+        chunks
+    );
     assert_eq!(chunks[0], vec![s0.clone()]);
     assert_eq!(
         chunks[1],
@@ -37,7 +47,10 @@ fn overlap_one_repeats_last_sentence_across_boundary() {
 
 #[test]
 fn empty_sentences_returns_zero_chunks() {
-    let cfg = ChunkConfig { max_chars: 100, overlap_sentences: 0 };
+    let cfg = ChunkConfig {
+        max_chars: 100,
+        overlap_sentences: 0,
+    };
     let chunks = chunk_paragraphs(vec![], &cfg);
     assert_eq!(chunks.len(), 0, "empty input → empty chunk vec, not [[]]");
 }

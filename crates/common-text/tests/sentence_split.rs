@@ -47,10 +47,5 @@ fn empty_text_returns_empty_vec() {
 fn abbreviations_without_space_do_not_split() {
     // "U.S.A is great." → 1 sentence, not 3
     let r = split_sentences("U.S.A is great.", LanguageHint::En);
-    assert_eq!(
-        r.len(),
-        1,
-        "U.S.A 缩写不能被误切为多句，实际 = {:?}",
-        r
-    );
+    assert_eq!(r.len(), 1, "U.S.A 缩写不能被误切为多句，实际 = {:?}", r);
 }
