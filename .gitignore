@@ -1,11 +1,8 @@
 # ========== Rust / Cargo ==========
 /target
 **/*.rs.bk
-# For libraries, Cargo.lock should be IGNORED. For binaries, commit it.
-# This repo produces binaries (http-server), but workspace root has many
-# libraries; follow standard practice and add at binary-crate level.
-# We keep it ignored here to avoid noise. Add back if doing release builds.
-Cargo.lock
+# Binary workspace — commit Cargo.lock for reproducible release builds.
+# (PR#9: was previously ignored; now committed per release-build-reproducibility review.)
 
 # ========== Leptos / Trunk ==========
 /dist

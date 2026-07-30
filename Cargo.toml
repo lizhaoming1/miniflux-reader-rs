@@ -16,7 +16,7 @@ authors = ["lizhaoming1"]
 license = "MIT"
 repository = "https://github.com/lizhaoming1/miniflux-reader-rs"
 description = "Rust rewrite of miniflux-reader: Axum + Leptos 0.7 SSR + Hydration MVP"
-rust-version = "1.81"
+rust-version = "1.92"
 
 [workspace.dependencies]
 # ---- HTTP ----

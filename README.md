@@ -39,26 +39,40 @@ Only the 6 MVP core links (see §2 of the design spec). Everything else is YAGNI
                   └─────────────────────────────────────────────► WASM
 ```
 
-## Quick start (scaffold — PR#1 only)
+## Quick start
 
 ```bash
-rustup show      # will auto-install 1.81 via rust-toolchain.toml
-cargo check      # passes; 6 crates compile (~30s first time)
-cargo test       # 1 placeholder test passes (see tests/hello_scaffold.rs)
+rustup show          # auto-installs 1.92.0 via rust-toolchain.toml
+cargo check          # 6 crates compile (~3 min first time)
+cargo test --workspace                     # 101+ tests pass (4 wasm ignored)
+cargo test -p http-server --test integration_full -- --test-threads=1  # PR#8 integration
 ```
 
-The 7 subsequent PRs then add behaviour one crate at a time (see §6.3 of the
-[design spec](docs/specs/2026-07-30-rust-leptos-mvp-design.md) for the exact 9-PR timeline).
-
-## Running (after PR#7 merges)
+## Running
 
 ```bash
-cp rust-config.example.json rust-config.json
-# edit miniflux credentials
+# 1. Install the Leptos build tool (one-time)
 cargo install cargo-leptos
-cargo leptos watch         # SSR + hot reload on :3000 (dev)
-cargo leptos build --release && ./target/release/http-server  # single binary
+
+# 2. Copy the config template and edit Miniflux credentials
+cp rust-config.example.json rust-config.json
+#   → edit "miniflux.url" / "username" / "password" to point at your instance
+
+# 3a. Dev mode — SSR + hot reload on :3000
+cargo leptos watch
+
+# 3b. Release mode — single binary on :8083
+cargo leptos build --release
+./target/release/http-server rust-config.json
 ```
+
+Data paths (Plan C isolation — never touches Python-side files):
+
+| Asset | Path (from `rust-config.json`) |
+|-------|-------------------------------|
+| SQLite DB | `rust-data/epub_progress_rust.db` |
+| EPUB uploads | `rust-epub-books/` |
+| Inject script | `crates/http-server/assets/_inject_rs.js` |
 
 ## Contributing — TDD + branch flow (enforced)
 
