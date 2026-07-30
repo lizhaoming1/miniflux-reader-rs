@@ -17,10 +17,10 @@ fn write_temp_config(content: &str) -> std::path::PathBuf {
 fn t0_load_full_config_parses_all_fields() {
     let cfg_json = json!({
         "listen_addr": "0.0.0.0:8083",
-        "miniflux": {
-            "url": "http://127.0.0.1:8081",
-            "username": "admin",
-            "password": "change-me"
+        "feed": {
+            "poll_interval_secs": 900,
+            "fetch_timeout_secs": 30,
+            "user_agent": "miniflux-reader-rs/0.2.0"
         },
         "paths": {
             "db":            "rust-data/epub_progress_rust.db",
@@ -31,7 +31,8 @@ fn t0_load_full_config_parses_all_fields() {
             "endpoint":     "https://translate.googleapis.com/translate_a/single",
             "timeout_ms":   15000,
             "batch_size":   25,
-            "max_retries":  3
+            "max_retries":  3,
+            "target_lang":  "zh-CN"
         },
         "tts": {
             "voice":        "zh-CN-XiaoxiaoNeural",
@@ -46,9 +47,9 @@ fn t0_load_full_config_parses_all_fields() {
     let cfg: AppConfig = load(path.to_str().unwrap()).expect("load should succeed");
 
     assert_eq!(cfg.listen_addr, "0.0.0.0:8083");
-    assert_eq!(cfg.miniflux.url, "http://127.0.0.1:8081");
-    assert_eq!(cfg.miniflux.username, "admin");
-    assert_eq!(cfg.miniflux.password, "change-me");
+    assert_eq!(cfg.feed.poll_interval_secs, 900);
+    assert_eq!(cfg.feed.fetch_timeout_secs, 30);
+    assert!(cfg.feed.user_agent.contains("0.2.0"));
     assert_eq!(cfg.paths.db, "rust-data/epub_progress_rust.db");
     assert_eq!(cfg.paths.epub_dir, "rust-epub-books");
     assert_eq!(cfg.paths.static_inject, "crates/http-server/assets");
@@ -59,6 +60,7 @@ fn t0_load_full_config_parses_all_fields() {
     assert_eq!(cfg.translate.timeout_ms, 15000);
     assert_eq!(cfg.translate.batch_size, 25);
     assert_eq!(cfg.translate.max_retries, 3);
+    assert_eq!(cfg.translate.target_lang, "zh-CN");
     assert_eq!(cfg.tts.voice, "zh-CN-XiaoxiaoNeural");
     assert_eq!(cfg.tts.rate, "+0%");
     assert_eq!(cfg.tts.timeout_ms, 60000);
