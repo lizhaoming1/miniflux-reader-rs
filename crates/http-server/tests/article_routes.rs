@@ -162,3 +162,57 @@ async fn t04_unread_count_empty_is_zero() {
     let body = body_string(resp).await;
     assert_eq!(body, r#"{"count":0}"#, "body was: {}", body);
 }
+
+// ---------- T5: GET /articles/:id includes translated zh content ----------
+
+#[tokio::test]
+async fn t05_get_article_includes_translated_zh() {
+    let state = test_state().await;
+    let feeds = FeedRepository::new(state.db.clone());
+    let f = feeds
+        .add("https://seed.example.com/rss")
+        .await
+        .expect("add");
+    let arts = ArticleRepository::new(state.db.clone());
+    let ups = ArticleUpsert {
+        guid: "seed-guid-trans".into(),
+        title: "Translate Test".into(),
+        url: "https://seed.example.com/trans".into(),
+        author: Some("tester".into()),
+        summary: "summary".into(),
+        // Plain text with no terminator so en_split produces exactly 1 sentence.
+        content_html: Some("Hello".into()),
+        published_at: "2026-07-30T00:00:00+00:00".into(),
+    };
+    arts.upsert(f.id, &ups).await.expect("upsert");
+    let art_id = arts
+        .list_all(Some(f.id), 10, 0)
+        .await
+        .expect("list")
+        .remove(0)
+        .id;
+
+    let app = build_axum_routes(state);
+    let resp = app
+        .oneshot(
+            http::Request::builder()
+                .method("GET")
+                .uri(format!("/api/v1/articles/{}", art_id))
+                .body(axum::body::Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let body = body_string(resp).await;
+    assert!(
+        body.contains("sentence--zh"),
+        "missing zh paragraph class: {}",
+        body
+    );
+    assert!(
+        body.contains("你好"),
+        "missing translated text '你好': {}",
+        body
+    );
+}

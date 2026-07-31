@@ -409,18 +409,16 @@ async fn get_article(
             }
         }
     };
-    // Sentence-split and optionally translate.
+    // Sentence-split and translate.
     use common_text::{render_bilingual_div, split_sentences, BilingualSentence, LanguageHint};
     let sentences = split_sentences(&html_parts, LanguageHint::Detect);
-    // TODO(perf): translate batch via state.translate. Placeholder below
-    // renders untranslated bilingual with empty zh — the
-    // common_text::render_bilingual_div still produces valid markup (zh
-    // paragraphs hidden via CSS if empty).
+    let translations = state.translate.translate_batch(sentences.clone()).await?;
     let bilingual_sents: Vec<BilingualSentence> = sentences
         .into_iter()
-        .map(|s| BilingualSentence {
-            src: s,
-            zh: String::new(),
+        .zip(translations.into_iter())
+        .map(|(src, zh)| BilingualSentence {
+            src,
+            zh,
             src_start: 0,
             src_end: 0,
         })
